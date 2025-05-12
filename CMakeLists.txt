@@ -13,7 +13,8 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(arena_alloc)
-
+# Add arena_alloc headers globally
+include_directories(${arena_alloc_SOURCE_DIR}/include)
 
 #---------------------------------------------------------------------
 # Safety & Compiler Flags
@@ -67,7 +68,7 @@ if(BUILD_TESTS)
 endif()
 
 # Examples (optional)
-option(BUILD_EXAMPLES "Build example programs" OFF)
+option(BUILD_EXAMPLES "Build example programs" ON)
 if(BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()

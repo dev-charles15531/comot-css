@@ -7,15 +7,16 @@ target_link_libraries(comot-css PRIVATE arena_alloc)
 
 # Subcomponents
 target_sources(comot-css PRIVATE
-    comot-css/lexer.c
-    tokens/token.c
-    utils/arena_alloc.c
-    utils/string_buf.c
+    tokenizer/tokenizer.c
+    tokenizer/tokenizer_impl.c
+    tokenizer/consume_comment_or_delim.c
+
+    utils/diag.c
 )
 
 # Private headers
 target_include_directories(comot-css PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/lexer/priv
+    ${CMAKE_CURRENT_SOURCE_DIR}/tokenizer/priv
     ${CMAKE_CURRENT_SOURCE_DIR}/utils
 )
 
@@ -34,6 +35,6 @@ install(TARGETS comot-css
     RUNTIME DESTINATION bin
 )
 
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/lexer
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/tokenizer
     DESTINATION include
 )
