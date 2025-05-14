@@ -15,7 +15,7 @@ Token consumeCommentOrDelim(Tokenizer *t, char codePoint) {
       if(*c == '*' && *cNext == codePoint) {
         advancePtrToN(t, 3);
 
-        return make_token(TOKEN_COMMENT, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, t->line, t->column);
+        return makeToken(TOKEN_COMMENT, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, t->line, t->column);
       }
 
       // consume next
@@ -23,11 +23,11 @@ Token consumeCommentOrDelim(Tokenizer *t, char codePoint) {
     }
 
     // end of file was reached before the end of comment[PARSE ERR]
-    return make_token(TOKEN_ERROR, TOKEN_KIND_ERROR, tCurr, t->curr - tCurr, t->line, t->column);
+    return makeToken(TOKEN_ERROR, TOKEN_KIND_ERROR, tCurr, t->curr - tCurr, t->line, t->column);
   }
   else {  // it's not a comment.
     advancePtrToN(t, 1);
 
-    return make_token(TOKEN_DELIM, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, t->line, t->column);
+    return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, t->line, t->column);
   }
 }

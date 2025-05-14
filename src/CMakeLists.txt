@@ -7,11 +7,18 @@ target_link_libraries(comot-css PRIVATE arena_alloc)
 
 # Subcomponents
 target_sources(comot-css PRIVATE
-    tokenizer/tokenizer.c
-    tokenizer/tokenizer_impl.c
-    tokenizer/consume_comment_or_delim.c
+  tokenizer/consume_comment_or_delim.c
+  tokenizer/consume_escaped_code_point.c
+  tokenizer/consume_ident_like_token.c
+  tokenizer/consume_ident_sequence.c
+  tokenizer/consume_numeric_token.c
+  tokenizer/consume_string.c
+  tokenizer/consume_url_token.c
+  tokenizer/reconsume_curr_code_point.c
+  tokenizer/tokenizer.c
+  tokenizer/tokenizer_impl.c
 
-    utils/diag.c
+  utils/diag.c
 )
 
 # Private headers
