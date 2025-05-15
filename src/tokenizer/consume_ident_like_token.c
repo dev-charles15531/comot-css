@@ -1,7 +1,9 @@
 #include <strings.h>
 #include "tokenizer_impl.h"
 #include "comot-css/tokens.h"
-
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 Token consumeIdentLikeToken(Tokenizer *t) {
   const char *tCurr = t->curr;
@@ -9,8 +11,20 @@ Token consumeIdentLikeToken(Tokenizer *t) {
   size_t startCol = t->column;
 
   const char *str = consumeIdentSequence(t);
+  size_t len = str - tCurr;
 
-  if(strcasecmp(str, "url") == 0 && *t->curr == '(') {
+  char *result = (char *) arena_alloc(t->arena, len + 1, 1);
+  if(result == NULL) {
+    printf("Arena alloc failed");
+    exit(1);
+  }
+
+  memcpy(result, tCurr, len);
+  result[len] = '\0'; // Null-terminate
+
+  // printf("Str:: %s -- Len:: %ld\n", result, len);
+
+  if(strcasecmp(result, "url") == 0 && *t->curr == '(') {
     advancePtrToN(t, 1);
 
     while (isWhitespace(peekPtrAtN(t, 0))) {

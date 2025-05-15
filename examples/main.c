@@ -37,7 +37,7 @@ const char* tokenTypeToString(TokenType type) {
 }
 
 int main(void) {
-  Arena arena = arena_create(1024 * 1024);
+  Arena arena = arena_create(1024 * 1024);  // 1mb
 
   // const char *css = "body { color: red; /* comment anything i want here */\ncontent: \"Hello world\" }";
   const char *css =

@@ -31,8 +31,6 @@ Tokenizer *tok_create(const char *input, Arena *arena) {
 Token tok_next(Tokenizer *t) {
   // Skip over any characters already consumed
   while (t->curr < t->end) {
-    //char charAtCurrPtr = *t->curr;
-
     // Save position
     const char *start = t->curr;
     size_t line = t->line;
@@ -46,15 +44,7 @@ Token tok_next(Tokenizer *t) {
     // Whitespace
     if(isWhitespace(start)) {
       while (t->curr < t->end && isWhitespace(t->curr)) {
-        // Track line/column
-        if (*t->curr == '\n') {
-          t->line++;
-          t->column = 1;
-        }
-        else {
-          t->column++;
-        }
-        t->curr++;
+        advancePtrToN(t, 1);
       }
 
       return makeToken(TOKEN_WHITESPACE, TOKEN_KIND_VALID, start, t->curr - start, line, column);
@@ -125,6 +115,11 @@ Token tok_next(Tokenizer *t) {
       return consumeIdentLikeToken(t);
     }
 
+    // Digit
+    if(isDigit(start)) {
+      return consumeNumericToken(t);
+    }
+
     // Hyphen/Minus sign (-)
     if(*start == '-') {
       const char *nxtPtr = peekPtrAtN(t, 1);
@@ -148,18 +143,121 @@ Token tok_next(Tokenizer *t) {
       }
     }
 
+    // Full stop (.)
+    if(*start == '.') {
+      if(isNextThreeCodePointStartNumber(t)) {
+        return consumeNumericToken(t);
+      }
+      else {
+        advancePtrToN(t, 1);
 
-    // Example: EOF check (can be improved)
-    if (t->curr >= t->end || *t->curr == '\0') {
-      return makeToken(TOKEN_EOF, TOKEN_KIND_VALID, t->curr, 0, line, column);
+        return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+      }
     }
 
-    // For now, treat anything else as a delim (placeholder logic)
-    t->curr++;
-    t->column++;
+    // Semicolon (;)
+    if(*start == ';') {
+      advancePtrToN(t, 1);
+
+      return makeToken(TOKEN_SEMICOLON, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+    }
+
+    // Colon (:)
+    if(*start == ':') {
+      advancePtrToN(t, 1);
+
+      return makeToken(TOKEN_COLON, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+    }
+
+    // Less than sign (<)
+    if(*start == '<') {
+      const char *nxtPtr = peekPtrAtN(t, 1);
+      const char *nxt2Ptr = peekPtrAtN(t, 2);
+      const char *nxt3Ptr = peekPtrAtN(t, 3);
+
+      if(*nxtPtr == '!' && *nxt2Ptr == '-' && *nxt3Ptr == '-') {
+        advancePtrToN(t, 3);
+
+        return makeToken(TOKEN_CDO, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+      }
+      else {
+        advancePtrToN(t, 1);
+
+        return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+      }
+    }
+
+    // Commercial 'AT' symbol (@)
+    if(*start == '@') {
+      advancePtrToN(t, 1);
+
+      if(isNextThreeCodePointStartAnIdentSequence(t)) {
+        const char *currPtr = consumeIdentSequence(t);
+
+        return makeToken(TOKEN_AT_KEYWORD, TOKEN_KIND_VALID, start, currPtr - start, line, column);
+      }
+      else {
+        return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+      }
+    }
+
+    // Left square bracket ([)
+    if(*start == '[') {
+      advancePtrToN(t, 1);
+
+      return makeToken(TOKEN_LEFT_SQUARE, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+    }
+
+    // Reverse solidus (\)
+    if(*start == '\\') {
+      if(isNCodePointValidEscape(t, 0)) {
+        return consumeIdentLikeToken(t);
+      }
+      else {
+        // TODO: [parse err]
+        advancePtrToN(t, 1);
+
+        return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+      }
+    }
+
+    // Right square bracket (])
+    if(*start == ']') {
+      advancePtrToN(t, 1);
+
+      return makeToken(TOKEN_RIGHT_SQUARE, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+    }
+
+    // Left curly bracket ({)
+    if(*start == '{') {
+      advancePtrToN(t, 1);
+
+      return makeToken(TOKEN_LEFT_CURLY, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+    }
+
+    // Right curly bracket (})
+    if(*start == '}') {
+      advancePtrToN(t, 1);
+
+      return makeToken(TOKEN_RIGHT_CURLY, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+    }
+    
+    // Digit
+    // if(isDigit(start)) {
+    //   printf("Here: %s\n", start);
+    //   return consumeNumericToken(t);
+    // }
+
+    // EOF
+    if(isEof(t)) {
+      return makeToken(TOKEN_EOF, TOKEN_KIND_VALID, t->curr, t->curr - start, line, column);
+    }
+
+    // Anything else as a delim
+    advancePtrToN(t, 1);
     return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
   }
 
   // If we fall through the loop, return EOF
-  return makeToken(TOKEN_EOF, TOKEN_KIND_VALID, t->curr, 0, t->line, t->column);
+  return makeToken(TOKEN_EOF, TOKEN_KIND_VALID, t->curr, t->curr - t->start, t->line, t->column);
 }

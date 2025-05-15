@@ -32,7 +32,7 @@ bool isWhitespace(const char *currCodePoint) {
 
 bool isDigit(const char *currCodePoint) {
   // 0-9
-  return (*currCodePoint >= 0 && *currCodePoint <= 9);
+  return (*currCodePoint >= '0' && *currCodePoint <= '9');
 }
 
 bool isLetter(const char *currCodePoint) {
