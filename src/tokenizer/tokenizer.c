@@ -69,9 +69,9 @@ Token tok_next(Tokenizer *t) {
       return makeToken(TOKEN_WHITESPACE, TOKEN_KIND_VALID, start, t->curr - start, line, column);
     }
 
-    // Double quotation mark (")
-    if(*start->bytePtr == '"') {
-      return consumeString(t, '"');
+    // Double or single quotation mark (")
+    if(*start->bytePtr == '"' || *start->bytePtr == '\'') {
+      return consumeString(t, *start->bytePtr);
     }
 
     // Number sign (#)
@@ -92,10 +92,6 @@ Token tok_next(Tokenizer *t) {
         return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
       }
     }
-
-    // Single quotation mark (')
-    if(*start->bytePtr == '\'')
-      return consumeString(t, '\'');
     
     // Left parenthesis (()
     if(*start->bytePtr == '(') {
