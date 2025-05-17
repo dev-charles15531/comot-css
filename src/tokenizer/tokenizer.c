@@ -8,7 +8,6 @@
 #include "decoder.h"
 #include "tokenizer_impl.h"
 
-#define ARENA_SIZE (64 * 1024) // 64 KB
 #define ARENA_ALIGNMENT alignof(max_align_t)
 
 Tokenizer *tok_create(const uint8_t *raw, size_t len, Arena *arena) {
@@ -170,13 +169,13 @@ Token tok_next(Tokenizer *t) {
 
         // Hyphen/Minus sign (-)
         if(*start->bytePtr == '-') {
-          const char *nxtPtr = peekPtrAtN(t, 1)->bytePtr;
-          const char *nxt2Ptr = peekPtrAtN(t, 2)->bytePtr;
+          const DecodedStream *nxtPtr = peekPtrAtN(t, 1);
+          const DecodedStream *nxt2Ptr = peekPtrAtN(t, 2);
 
           if(isNextThreeCodePointStartNumber(t)) {
             return consumeNumericToken(t);
           }
-          else if(*nxtPtr == '-' && *nxt2Ptr == '>') {
+          else if(nxtPtr && *nxtPtr->bytePtr == '-' && nxt2Ptr && *nxt2Ptr->bytePtr == '>') {
             advancePtrToN(t, 3);
 
             return makeToken(TOKEN_CDC, TOKEN_KIND_VALID, start, t->curr - start, line, column);
@@ -219,11 +218,11 @@ Token tok_next(Tokenizer *t) {
 
         // Less than sign (<)
         if(*start->bytePtr == '<') {
-          const char *nxtPtr = peekPtrAtN(t, 1)->bytePtr;
-          const char *nxt2Ptr = peekPtrAtN(t, 2)->bytePtr;
-          const char *nxt3Ptr = peekPtrAtN(t, 3)->bytePtr;
+          const DecodedStream *nxtPtr = peekPtrAtN(t, 1);
+          const DecodedStream *nxt2Ptr = peekPtrAtN(t, 2);
+          const DecodedStream *nxt3Ptr = peekPtrAtN(t, 3);
 
-          if(*nxtPtr == '!' && *nxt2Ptr == '-' && *nxt3Ptr == '-') {
+          if(nxtPtr && *nxtPtr->bytePtr == '!' && nxt2Ptr && *nxt2Ptr->bytePtr == '-' && nxt3Ptr && *nxt3Ptr->bytePtr == '-') {
             advancePtrToN(t, 3);
 
             return makeToken(TOKEN_CDO, TOKEN_KIND_VALID, start, t->curr - start, line, column);

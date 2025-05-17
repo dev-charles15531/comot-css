@@ -1,0 +1,5 @@
+@media (max-width: 600px {
+  .box { font-size: 12px; }
+}
+
+div #i

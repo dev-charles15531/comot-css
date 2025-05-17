@@ -32,12 +32,12 @@ Token emitErrorToken(Tokenizer *t, const char* message, const DecodedStream *val
 }
 
 bool isNCodePointValidEscape(Tokenizer *t, size_t n) {
-  const char *currCodePointPtr = peekPtrAtN(t, n)->bytePtr;
-  if(currCodePointPtr && *currCodePointPtr != '\\')
+  const DecodedStream *currCodePointPtr = peekPtrAtN(t, n);
+  if(currCodePointPtr && *currCodePointPtr->bytePtr != '\\')
     return false;
 
-  const char *nextCodePointPtr = peekPtrAtN(t, n + 1)->bytePtr;
-  if(nextCodePointPtr && *nextCodePointPtr == '\n')
+  const DecodedStream *nextCodePointPtr = peekPtrAtN(t, n + 1);
+  if(nextCodePointPtr && *nextCodePointPtr->bytePtr == '\n')
     return false;
 
   return true;
@@ -72,17 +72,17 @@ bool isIdentCodePoint(const DecodedStream *currStream) {
 
 bool isNextThreeCodePointStartAnIdentSequence(Tokenizer *t) {
   const char *firstCodePoint = t->curr->bytePtr;
-  const char *secondCodePoint = peekPtrAtN(t, 1)->bytePtr;
-  const char *thirdCodePoint = peekPtrAtN(t, 2)->bytePtr;
+  const DecodedStream *secondCodePoint = peekPtrAtN(t, 1);
+  const DecodedStream *thirdCodePoint = peekPtrAtN(t, 2);
 
   if(*firstCodePoint == '-') {
-    if(isIdentStartCodePoint(secondCodePoint)) {
+    if(isIdentStartCodePoint(secondCodePoint->bytePtr)) {
       return true;
     }
-    if(*secondCodePoint == '-' && isIdentStartCodePoint(thirdCodePoint)) {
+    if(secondCodePoint && *secondCodePoint->bytePtr == '-' && thirdCodePoint && isIdentStartCodePoint(thirdCodePoint->bytePtr)) {
       return true;
     }
-    if(*secondCodePoint == '\\' && isNCodePointValidEscape(t, 1)) {
+    if(secondCodePoint && *secondCodePoint->bytePtr == '\\' && isNCodePointValidEscape(t, 1)) {
       return true;
     }
   }
@@ -98,20 +98,20 @@ bool isNextThreeCodePointStartAnIdentSequence(Tokenizer *t) {
 
 bool isNextThreeCodePointStartNumber(Tokenizer *t) {
   const char *firstCodePoint = t->curr->bytePtr;
-  const char *secondCodePoint = peekPtrAtN(t, 1)->bytePtr;
-  const char *thirdCodePoint = peekPtrAtN(t, 2)->bytePtr;
+  const DecodedStream *secondCodePoint = peekPtrAtN(t, 1);
+  const DecodedStream *thirdCodePoint = peekPtrAtN(t, 2);
 
   if(*firstCodePoint == '+' || *firstCodePoint == '-') {
-    if(isDigit(secondCodePoint))
+    if(secondCodePoint && isDigit(secondCodePoint->bytePtr))
       return true;
-    else if(*secondCodePoint == '.' && isDigit(thirdCodePoint))
+    else if(secondCodePoint && *secondCodePoint->bytePtr == '.' && thirdCodePoint && isDigit(thirdCodePoint->bytePtr))
       return true;
     else
       return false;
   }
 
   if(*firstCodePoint == '.') {
-    if(isDigit(secondCodePoint))
+    if(secondCodePoint && isDigit(secondCodePoint->bytePtr))
       return true;
     else 
       return false;

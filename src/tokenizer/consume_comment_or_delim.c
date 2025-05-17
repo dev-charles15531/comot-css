@@ -6,15 +6,25 @@ Token consumeCommentOrDelim(Tokenizer *t, char codePoint) {
   const DecodedStream *tCurr = t->curr;
 
   const DecodedStream *c = peekPtrAtN(t, 1);
+  if(!c) {
+    // [PARSE ERR] end of file was reached before the end of comment
+    return emitErrorToken(t, "Unexpected end of file", tCurr, t->curr - tCurr, t->line, t->column);
+  }
+
   if(*c->bytePtr == '*') {   // this should be a comment[start]
     advancePtrToN(t, 1);
+
     while(!isEof(t)) {
       c = peekPtrAtN(t, 1);
       const DecodedStream *cNext = peekPtrAtN(t, 2);
+      if(!c || !cNext) {
+        // [PARSE ERR] end of file was reached before the end of comment
+        return emitErrorToken(t, "Unexpected end of file", tCurr, t->curr - tCurr, t->line, t->column);
+      }
 
       // if this is the end of the comment
       if(*c->bytePtr == '*' && *cNext->bytePtr == codePoint) {
-        advancePtrToN(t, 3);
+        advancePtrToN(t, 2);
 
         return makeToken(TOKEN_COMMENT, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, t->line, t->column);
       }

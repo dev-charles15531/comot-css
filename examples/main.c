@@ -41,31 +41,6 @@ const char* tokenTypeToString(TokenType type) {
 int main(void) {
   Arena arena = arena_create(1024 * 1024);  // 1mb
 
-  // const char *css = "body { color: red; /* comment anything i want here */\ncontent: \"Hello world\" }";
-  // const char *css =
-  // "/* comment */\n"
-  // ".a {\n"
-  // "  content: \"simple string\";\n"
-  // "  content: \"escaped quote: \\\"\";\n"
-  // "  content: \"unicode: \\263A\";\n" // ☺
-  // "  content: 'single quoted';\n"
-  // "  /* multiple */ /* comments \\*/\n"
-  // "}\n"
-  // "#myId {\n"
-  // "  color: blue;\n"
-  // "}\n"
-  // ".funcTest {\n"
-  // "  background-image: url(\"image(path).png\");\n" // parentheses in URL
-  // "  transform: rotate(45deg);\n" // parentheses in function
-  // "  margin: 10px 5px 10px 5px;\n"
-  // "  padding: 10px 5px;\n"
-  // "  font-size: calc(100% + 2em);\n" // plus sign
-  // "  box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.3);\n" // comma
-  // "  border: 1px solid #ccc;\n"
-  // "  font-weight: bold;\n"
-  // "  -webkit-user-select: none;\n" // hyphen-minus in vendor prefix
-  // "}\n";
-
   const char *css =
   "/* comment token */\n"
   "@media screen and (min-width: 768px) {\n"

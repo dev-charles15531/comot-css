@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-# Lexer Core Library (static)
+# comot-css Core Library (static)
 #---------------------------------------------------------------------
 add_library(comot-css STATIC)
 
@@ -24,25 +24,49 @@ target_sources(comot-css PRIVATE
 
 # Private headers
 target_include_directories(comot-css PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/tokenizer/priv
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils
+  ${CMAKE_CURRENT_SOURCE_DIR}/tokenizer/priv
+  ${CMAKE_CURRENT_SOURCE_DIR}/utils
 )
 
 # Public API headers (installed with library)
 target_include_directories(comot-css PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
 )
+
+#---------------------------------------------------------------------
+# Compiler Warnings & Sanitizers
+#---------------------------------------------------------------------
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+  # Common warning flags
+  target_compile_options(comot-css PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Wformat=2
+    -Wstrict-aliasing=2
+    -Wmissing-prototypes
+    -Wnull-dereference
+    -Wstack-protector
+  )
+
+  # Treat warnings as errors (optional)
+  if(TOK_WARNINGS_AS_ERRORS)
+    target_compile_options(comot-css PRIVATE -Werror)
+  endif()
+elseif(MSVC)
+  add_compile_options(/W4 /WX)
+endif()
 
 #---------------------------------------------------------------------
 # Installation Rules (for package managers)
 #---------------------------------------------------------------------
 install(TARGETS comot-css
-    ARCHIVE DESTINATION lib
-    LIBRARY DESTINATION lib
-    RUNTIME DESTINATION bin
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/tokenizer
-    DESTINATION include
+  DESTINATION include
 )
