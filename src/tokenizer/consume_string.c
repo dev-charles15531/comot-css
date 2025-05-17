@@ -1,45 +1,59 @@
 #include "tokenizer_impl.h"
 #include "comot-css/tokens.h"
+#include "comot-css/diag.h"
 
-Token consumeString(Tokenizer *t, char codePoint) {
-  const char *tCurr = t->curr;
+
+Token consumeString(Tokenizer *t, char endingCodePoint) {
+  const DecodedStream *startStream = t->curr;
   size_t startLine = t->line;
   size_t startCol = t->column;
 
+  advancePtrToN(t, 1); // consume opening quote
+
   while(!isEof(t)) {
-    // advancePtrToN(t, 1);
-    const char *c = peekPtrAtN(t, 1);
+    const char *ptr = t->curr->bytePtr;
 
-    // if this is the end of the string
-    if(*c == codePoint) {
-      advancePtrToN(t, 2);
-
-      return makeToken(TOKEN_STRING, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, startLine, startCol);
+    if(*ptr == endingCodePoint) {
+      advancePtrToN(t, 1); // consume closing quote
+      return makeToken(TOKEN_STRING, TOKEN_KIND_VALID, startStream, t->curr - startStream, startLine, startCol);
     }
 
-    // if this is a new line
-    if(*c == '\n') {
-      advancePtrToN(t, 1);
-
-      // return bad string
-      return makeToken(TOKEN_STRING, TOKEN_KIND_ERROR, tCurr, t->curr - tCurr, startLine, startCol);
+    if(*ptr == '\n') {
+      logDiagnostic("Unclosed string literal", startStream->bytePtr, startLine, startCol);
+      return makeToken(TOKEN_BAD_STRING, TOKEN_KIND_ERROR, startStream, t->curr - startStream, startLine, startCol);
     }
 
-    // if this is a reverse solidus(\)
-    if(*c == '\\') {
-      const char *cNext = peekPtrAtN(t, 1);
+    if(*ptr == '\\') {
+      const char *nxt = peekPtrAtN(t, 1)->bytePtr;
 
-      if(*cNext == '\n')
-        advancePtrToN(t, 1);
-      else if(isNCodePointValidEscape(t, 1)) {
-        consumeEscapedCodePoint(t, *c);  
+      // If next is EOF — spec says do nothing and fall through
+      if(*nxt == '\0') {
+        break;
       }
+
+      if(*nxt == '\n') {
+        advancePtrToN(t, 2); // skip both backslash and newline
+        continue;
+      }
+
+      // Valid escape?
+      if(isNCodePointValidEscape(t, 0)) {
+        advancePtrToN(t, 1); // consume '\'
+        consumeEscapedCodePoint(t); // modifies t->curr
+        continue;
+      }
+
+      // Invalid escape
+      logDiagnostic("Invalid escape sequence in string", t->curr->bytePtr, t->line, t->column);
+      advancePtrToN(t, 1); // skip '\'
+      continue;
     }
 
-    // Anything else? consume!
+    // Anything else — consume it
     advancePtrToN(t, 1);
   }
 
-  // end of file was reached before the end of string TODO: [PARSE ERR]
-  return makeToken(TOKEN_STRING, TOKEN_KIND_ERROR, tCurr, t->curr - tCurr, t->line, t->column);
+  // EOF before closing quote
+  logDiagnostic("Unexpected end of file in string", startStream->bytePtr, startLine, startCol);
+  return makeToken(TOKEN_STRING, TOKEN_KIND_ERROR, startStream, t->curr - startStream, startLine, startCol);
 }

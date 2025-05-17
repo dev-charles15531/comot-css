@@ -2,25 +2,8 @@
 #define ERROR_H
 
 #include <stddef.h>
+#include "comot-css/tokens.h"
 
-// Lightweight error code enum
-typedef enum {
-  LEXER_OK = 0,
-  LEXER_ERR_UNTERMINATED_STRING,
-  LEXER_ERR_INVALID_ESCAPE,
-  LEXER_ERR_UNEXPECTED_CHAR,
-  LEXER_ERR_UNTERMINATED_COMMENT,
-  LEXER_ERR_UNKNOWN_TOKEN,
-  LEXER_ERR_BAD_NUMBER
-} LexerErrorCode;
-
-// Error structure
-typedef struct {
-  LexerErrorCode code;
-  size_t line;
-  size_t column;
-} LexerError;
-
-const char* lexer_error_message(LexerErrorCode code);
+Token emitErrorToken(Tokenizer *t, const char* message, const DecodedStream *value, size_t length, size_t line, size_t column);
 
 #endif

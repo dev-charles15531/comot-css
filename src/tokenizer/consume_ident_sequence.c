@@ -2,14 +2,14 @@
 #include "tokenizer_impl.h"
 #include "comot-css/tokens.h"
 
-const char *consumeIdentSequence(Tokenizer *t) {
-  const char *startPtr = t->curr;
+const DecodedStream *consumeIdentSequence(Tokenizer *t) {
+  const DecodedStream *startPtr = t->curr;
 
   while(advancePtrToN(t, 1)) {
     if(isIdentCodePoint(t->curr))
       continue;
     else if(isNCodePointValidEscape(t, 0)) {
-      consumeEscapedCodePoint(t, *t->curr);
+      consumeEscapedCodePoint(t); // NOTE: no code point is returned from this function
       
       continue;
     }

@@ -1,47 +1,51 @@
 #include <string.h>
 #include "tokenizer_impl.h"
 #include "comot-css/tokens.h"
+#include "comot-css/diag.h"
 
 static void consumeReminantsOfBadUrl(Tokenizer *t) {
   while(advancePtrToN(t, 1)) {
-    if(*t->curr == ')' || isEof(t)) {
+    if(*t->curr->bytePtr == ')' || isEof(t)) {
       return;
     }
 
     if(isNCodePointValidEscape(t, 0)) {
-      consumeEscapedCodePoint(t, *t->curr);
+      consumeEscapedCodePoint(t); // NOTE: no code point is returned from this function
     }
   }
 }
 
 Token consumeUrlToken(Tokenizer *t) {
-  const char *tCurr = t->curr;
+  const DecodedStream *tCurr = t->curr;
   size_t startLine = t->line;
   size_t startCol = t->column;
 
-  while(isWhitespace(t->curr)) {
+  while(isWhitespace(t->curr->bytePtr)) {
     advancePtrToN(t, 1);
   }
 
   while(t->curr) {
-    const char *charAtCurrPtr = t->curr;
+    const char *charAtCurrPtr = t->curr->bytePtr;
     if(*charAtCurrPtr == ')') {
       return makeToken(TOKEN_URL, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, startLine, startCol);
     }
 
     if(isEof(t)) {
-      // TODO: [parse err]
+      // [PARSE ERR] end of file was reached before the end of string
+      logDiagnostic("Unexpected end of file", tCurr->bytePtr, startLine, startCol);
+
       return makeToken(TOKEN_URL, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, startLine, startCol);
     }
 
     if(isWhitespace(charAtCurrPtr)) {
-      while(isWhitespace(t->curr)) {
+      while(isWhitespace(t->curr->bytePtr)) {
         advancePtrToN(t, 1);
       }
 
-      if(*t->curr == ')' || isEof(t)) {
+      if(*t->curr->bytePtr == ')' || isEof(t)) {
         if(isEof(t)) {
-          // TODO: [parse err]
+          // [PARSE ERR] end of file was reached before the end of string
+          logDiagnostic("Unexpected end of file", tCurr->bytePtr, startLine, startCol);
         }
 
         advancePtrToN(t, 1);
@@ -51,24 +55,26 @@ Token consumeUrlToken(Tokenizer *t) {
       else {
         consumeReminantsOfBadUrl(t);
 
-        return makeToken(TOKEN_BAD_URL, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, startLine, startCol);
+        return makeToken(TOKEN_BAD_URL, TOKEN_KIND_ERROR, tCurr, t->curr - tCurr, startLine, startCol);
       }
     }
 
     if(*charAtCurrPtr == '"' || *charAtCurrPtr == '\'' || *charAtCurrPtr == '(') {
-      // TODO: [parse err]
+      // [PARSE ERR] end of file was reached before the end of string
+      logDiagnostic("Non printable code point", tCurr->bytePtr, startLine, startCol);
 
       consumeReminantsOfBadUrl(t);
 
-      return makeToken(TOKEN_BAD_URL, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, startLine, startCol);
+      return makeToken(TOKEN_BAD_URL, TOKEN_KIND_ERROR, tCurr, t->curr - tCurr, startLine, startCol);
     }
 
     if(*charAtCurrPtr == '\\') {
       if(isNCodePointValidEscape(t, 0)) {
-        consumeEscapedCodePoint(t, *t->curr);
+        consumeEscapedCodePoint(t); // NOTE: no code point is returned from this function
       }
       else {
-        // TODO: [parse err]
+        // [PARSE ERR] end of file was reached before the end of string
+        logDiagnostic("Invalid escape sequence", tCurr->bytePtr, startLine, startCol);
 
         consumeReminantsOfBadUrl(t);
 
@@ -84,4 +90,3 @@ Token consumeUrlToken(Tokenizer *t) {
 
   return makeToken(TOKEN_BAD_URL, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, startLine, startCol);
 }
-

@@ -18,6 +18,7 @@ target_sources(comot-css PRIVATE
   tokenizer/tokenizer.c
   tokenizer/tokenizer_impl.c
 
+  utils/decoder.c
   utils/diag.c
 )
 

@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "tokenizer_impl.h"
-// #include "comot-css/tokenizer.h"
+#include "comot-css/diag.h"
 
 #define REPLACEMENT_CHAR 0xFFFD
 #define MAX_CODE_POINT   0x10FFFF
@@ -26,35 +26,36 @@ static inline int hexValue(const char *c) {
 
 // Consumes an escaped code point starting from the reverse solidus(\).
 // Assumes '\' has already been consumed and a valid escape follows.
-// Updates *pos to new offset. Input must be null-terminated.
-void consumeEscapedCodePoint(Tokenizer *t, char codePoint) {
-  // const char *tCurr = t->curr;  // Start of token content
-  // size_t startLine = t->line;
-  // size_t startCol = t->col;
-
+void consumeEscapedCodePoint(Tokenizer *t) {
   uint32_t value = 0;
-  size_t digits = 1;
+  size_t digits = 0;
 
-  value = hexValue(&codePoint);
-  advancePtrToN(t, 1);
-
-  // Consume up to 5 more hex digits (total max 6)
-  while (digits < 6 && isHex(peekPtrAtN(t, 1))) {
-    value = (value << 4) | hexValue(advancePtrToN(t, 1));
+  // Read up to 6 hex digits
+  while(!isEof(t) && isHex(t->curr->bytePtr) && digits < 6) {
+    value = (value << 4) | hexValue(t->curr->bytePtr);
+    advancePtrToN(t, 1);
     digits++;
   }
 
-  // Consume whitespace after hex digits
-  if (isWhitespace(peekPtrAtN(t, 1))) {
+  // Optional single whitespace after escape sequence
+  if (!isEof(t) && isWhitespace(t->curr->bytePtr)) {
     advancePtrToN(t, 1);
   }
 
   // Validate the code point
   if (value == 0 || value > MAX_CODE_POINT || (value >= 0xD800 && value <= 0xDFFF)) {
     value = REPLACEMENT_CHAR;
+
+    // TODO: replace in tokenizer input with REPLACEMENT_CHAR
+    // NOTE: this char must have been replaced before reaching thsis point
   }
 
-  // The string content will be pulled from the original source (tCurr to t->curr)
-  // return makeToken(TOKEN_STRING, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, startLine, startCol);
+  if(isEof(t)) {
+    // [PARSE ERR]  unclosed string
+    // return bad string
+    // TODO: the replace thing needs to be done here as well.
+    logDiagnostic("Unexpected end of file", t->curr->bytePtr, t->line, t->column);
+  }
+
   return;
 }

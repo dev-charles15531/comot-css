@@ -1,10 +1,10 @@
 #include "tokenizer_impl.h"
 
-const char *reconsumeCurrInputCodePoint(Tokenizer *t) {
-  const char *prev = ptrLookback(t);
+const DecodedStream *reconsumeCurrInputCodePoint(Tokenizer *t) {
+  const DecodedStream *prev = ptrLookback(t);
 
   if(prev) {
-    if(*prev == '\n') {
+    if(*prev->bytePtr == '\n') {
       t->line --;
       t->column = 1;
     }
