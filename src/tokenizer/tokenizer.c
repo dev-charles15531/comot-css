@@ -10,7 +10,7 @@
 
 #define ARENA_ALIGNMENT alignof(max_align_t)
 
-Tokenizer *tok_create(const uint8_t *raw, size_t len, Arena *arena) {
+Tokenizer *tokCreate(const uint8_t *raw, size_t len, Arena *arena) {
   if(!arena || !raw) 
     return NULL;
 
@@ -40,7 +40,7 @@ Tokenizer *tok_create(const uint8_t *raw, size_t len, Arena *arena) {
   return t;
 }
 
-Token tok_next(Tokenizer *t) {
+Token tokNext(Tokenizer *t) {
   if(!t) {
     printf("Invalid or NULL Tokenizer type t");
 
@@ -74,7 +74,7 @@ Token tok_next(Tokenizer *t) {
             t->state = DELIM_STATE;
         }
 
-        return tok_next(t);
+        return tokNext(t);
       case IDENTIFIER_STATE: 
         // Identifiers
         t->state = DATA_STATE;

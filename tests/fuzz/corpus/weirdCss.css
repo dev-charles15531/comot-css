@@ -1,5 +1,71 @@
-/* unclosed comment
-html {
-  background: red;
+/* Random comment with edge case characters */
+body {
+  background-color: #00ff00; /* Valid color */
+  font-size: 12px;
+  font-family: "Weird“Font™"; /* Non-standard quote and trademark symbol */
+  margin: calc(20px * 2 / -1); /* Unexpected calc behavior */
+  padding: 1px --2px;; /* Double semicolon */
+  border-radius: 50% // comment after value (unexpected inline comment)
+  /* Random characters with spaces */
+  color: #ffff00//broken comment 
 }
-/* */ /* nested */ comment */
+
+h1::before {
+  content: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%3E%3Ctext%20x%3D%2210%22%20y%3D%2210%22%3E%F0%9F%92%96%20SVG%20text%20%F0%9F%92%96%3C/text%3E%3C/svg%3E'); /* Embedded SVG inside a URL */
+  content: "test\ud83d\ude00"; /* Valid Unicode + emoji */
+}
+
+@font-face {
+  font-family: "CrazyFont";
+  src: url("data:font/woff2;base64,abcdefg...") format("woff2");
+}
+
+@import url("https://example.com/styles.css");
+
+@media screen and (max-width: 500px) {
+  /* Open brace missing */
+  h2 {
+    font-weight: bold;;  /* Double semicolon */
+    text-align: left;
+    font-size: 10px;
+  }
+}
+
+#id_123 {
+  position: absolute;
+  top: 10px; left: 10px;
+  transform: rotate(45deg); /* Rotation */
+  /* Invalid CSS rule (missing closing parenthesis) */
+  box-shadow: 10px 10px 10px rgba(255, 0, 0, 0.5;
+}
+
+a[href="ht@tp://invalid-url.com"] { /* Invalid URL scheme */
+  display: block;
+  width: 200%;
+}
+
+div[title='this is an unclosed attribute'] {
+  width: 100%;
+}
+
+div#foo:before {
+  content: "\u2022\abc"; /* Unescaped character after Unicode */
+}
+
+@keyframes odd-steps {
+  from { background-color: rgba(0, 0, 0, .5); }
+  to { background-color: rgba(0, 0, 0); }
+}
+
+div::-webkit-inner-spin-button {
+  -webkit-appearance: none; /* Invalid webkit appearance for non-existing element */
+}
+
+p {
+  font-family: "Helvetica Neue"; font-weight: ; /* Missing font-weight value */
+  /* nested comment 
+  /* another nested comment 
+  */
+  color: red;
+}
+

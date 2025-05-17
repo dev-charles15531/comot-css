@@ -1,5 +1,85 @@
+/* Start of malformed CSS */
 body {
-  margin: 0;
-  padding: 0;
-  color: black;
+    color: red;
+    font-size: 12px;
+    background-color: #f0f0f0;
+    margin: 10px 5px 20px 5px; /* Normal shorthand syntax */
+    padding: 0 5px 10px;
+    font-family: "Helvetica, Arial, sans-serif;
+    border: 1px solid #000;
 }
+
+h1 {
+    font-size: 32px;
+    margin-top: 20px;
+    padding: 5px;
+    color: blue;
+    text-align: center;
+    background-image: url("invalid-url);
+    height: 100px;
+}
+
+@media screen and (max-width: 600px {
+    body {
+        color: green;
+        font-size: 14px;
+    }
+}
+
+#header {
+    height: 50px;
+    width: 100%;
+    background: linear-gradient(to right, red, blue;
+}
+
+#footer {
+    background: url("footer-image.png");
+    padding: 10px 20px 30px;
+    color: invalidColor;
+    border-radius: 5px;
+}
+
+#content {
+    padding: 20px;
+    margin: 10px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 1px dashed purple;
+}
+
+.class-name-123 {
+    font-size: 18px;
+    color: rgb(255, 0, 255);
+    border-bottom: 2px dotted black;
+    text-decoration: underline;
+}
+
+/* Invalid media query with an open bracket */
+@media only screen and (max-width: 700px) {
+    .container {
+        width: 80%;
+        height: 500px;
+    }
+    .content::before {
+        content: 'Content area';
+    }
+}
+
+/* Random characters and malformed selectors */
+.div-with-random-characters-&&& {
+    font-style: italic;
+    margin: 15px;
+    padding: 0;
+    border-top: 3px solid #ccc;
+}
+
+.invalid-selector-{} {
+    display: block;
+    width: 50%;
+}
+
+/* Closing with an unclosed comment */
+body {
+    background-color: #fff; /* Unclosed comment here
+
+/* End of malformed CSS */
+

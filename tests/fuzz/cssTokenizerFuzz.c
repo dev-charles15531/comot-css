@@ -5,7 +5,7 @@
 #include "comot-css/tokenizer.h"
 
 #define MAX_INPUT_SIZE 1024
-#define FIXED_ARENA_SIZE 2048
+#define FIXED_ARENA_SIZE 1048576  // 1MB
 #define MAX_TOKENS 1024
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
@@ -20,15 +20,14 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   input[size] = '\0';
 
   Arena arena = arena_create(FIXED_ARENA_SIZE);
-  Tokenizer *t = tok_create((const uint8_t *)input, size + 1, &arena); // Include null terminator
+  Tokenizer *t = tokCreate((const uint8_t *)input, size + 1, &arena);
 
   if(t) {
     Token tok;
     size_t token_count = 0;
 
     do {
-      tok = tok_next(t);
-      if (token_count++ < 5)
+      tok = tokNext(t);
 
       // Exit loop if max tokens reached or EOF
     } while(tok.type != TOKEN_EOF && token_count < MAX_TOKENS);

@@ -22,7 +22,7 @@ echo "🚀 Running fuzz test: $FUZZ_TARGET"
 "$BUILD_DIR/tests/fuzz/$FUZZ_TARGET" "$CORPUS_DIR" \
   -runs="$RUNS" \
   -artifact_prefix="$CRASH_DIR/" \
-  -max_len=64 \
+  -max_len=1024 \
   -rss_limit_mb=50 \
   -max_total_time=30
 

@@ -1,5 +1,50 @@
-@media (max-width: 600px {
-  .box { font-size: 12px; }
+/* Start of valid comment */
+body {
+  color: #ggg; /* Invalid hex color */
+  font-family: "Open Sans; /* Unterminated string */
+  background: url("https://example.com/image.png); /* Broken URL */
+  margin: 10px 20px !improtant; /* Misspelled important */
+  border: 1px solid rgb(300, -10, 256); /* Out-of-range RGB */
+  --main-color: #12345G; /* Invalid hex digit */
 }
 
-div #id ? !important
+@media screen and (min-width: 768px {
+  .container::before {
+    content: "\z123"; /* Invalid escape */
+    width: calc(100% - 20px;
+    height: 50vh
+  }
+}
+
+a[href^="https://example.com"]::after {
+  content: "Link → ➔ » →→→"; /* Valid Unicode, just large */
+  display: bl0ck; /* Misspelled display value */
+}
+
+@-invalid-rule something {
+  padding: 1px 2px 3px 4px;
+}
+
+#id### {
+  content: "invalid selector";
+  float: left;
+}
+
+🚀launch {
+  color: red;
+}
+
+div[title="missing end] {
+  display: none;
+}
+
+/* malformed at-rule */
+@@@unknown {
+  top: 0;
+}
+
+/* random garbage */
+%!&^@!(*#@!
+/*! unterminated comment...
+
+

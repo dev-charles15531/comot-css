@@ -60,7 +60,7 @@ int main(void) {
 
 
 
-  Tokenizer *t = tok_create((const uint8_t *) css, strlen(css), &arena);
+  Tokenizer *t = tokCreate((const uint8_t *) css, strlen(css), &arena);
   if (!t) {
     fprintf(stderr, "Failed to create tokenizer.\n");
     return 1;
@@ -68,7 +68,7 @@ int main(void) {
 
   Token tok;
   do {
-    tok = tok_next(t);
+    tok = tokNext(t);
     printf("Token: type=%s, value='%.*s'\n", tokenTypeToString(tok.type), (int)tok.length, tok.value);
   } while (tok.type != TOKEN_EOF);
 
