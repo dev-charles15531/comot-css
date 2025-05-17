@@ -12,9 +12,11 @@
 // Tokenizer FSM state
 typedef enum {
   DATA_STATE,
+  IDENTIFIER_STATE,
   STRING_STATE,
-  BAD_STRING_STATE,
-  ESCAPE_STATE
+  NUMBER_STATE,
+  WHITESPACE_STATE,
+  DELIM_STATE
 } TokenizerState;
 
 // Tokenizer state structure

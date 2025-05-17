@@ -55,221 +55,259 @@ Token tok_next(Tokenizer *t) {
     size_t line = t->line;
     size_t column = t->column;
 
-    // Comments or '/'
-    if(*start->bytePtr == '/') {
-      return consumeCommentOrDelim(t, '/');
-    }
-
-    // Whitespace
-    if(isWhitespace(start->bytePtr)) {
-      while (t->curr < t->end && isWhitespace(t->curr->bytePtr)) {
-        advancePtrToN(t, 1);
-      }
-
-      return makeToken(TOKEN_WHITESPACE, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-    }
-
-    // Double or single quotation mark (")
-    if(*start->bytePtr == '"' || *start->bytePtr == '\'') {
-      return consumeString(t, *start->bytePtr);
-    }
-
-    // Number sign (#)
-    if(*start->bytePtr == '#') {
-      advancePtrToN(t, 1);
-
-      const DecodedStream *nxtPtr = t->curr;
-      if(isIdentCodePoint(nxtPtr) || (isNCodePointValidEscape(t, 0) && isNCodePointValidEscape(t, 1))) {
-        if(isNextThreeCodePointStartAnIdentSequence(t)) {
-          const DecodedStream *currStream = consumeIdentSequence(t);
-
-          return makeToken(TOKEN_HASH, TOKEN_KIND_VALID, start, currStream - start, line, column);
+    // NOTE: FSM RUN
+    switch(t->state) {
+      case DATA_STATE:
+        if(isIdentStartCodePoint(start->bytePtr)) {
+          // Possibly start of identifier
+          t->state = IDENTIFIER_STATE;
         }
-      }
-      else {
-        advancePtrToN(t, 1);
+        else if(*start->bytePtr == '"' || *start->bytePtr == '\'') {
+          t->state = STRING_STATE;
+        }
+        else if(isDigit(start->bytePtr)) {
+          t->state = NUMBER_STATE;
+        }
+        else if (t->curr < t->end && isWhitespace(start->bytePtr)) {
+          t->state = WHITESPACE_STATE;
+        }
+        else {
+            t->state = DELIM_STATE;
+        }
 
-        return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-      }
-    }
-    
-    // Left parenthesis (()
-    if(*start->bytePtr == '(') {
-      advancePtrToN(t, 1);
-
-      return makeToken(TOKEN_LEFT_PAREN, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-    }
-
-    // Right parenthesis ())
-    if(*start->bytePtr == ')') {
-      advancePtrToN(t, 1);
-
-      return makeToken(TOKEN_RIGHT_PAREN, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-    }
-
-    // Plus sign (+)
-    if(*start->bytePtr == '+') {
-      if(isNextThreeCodePointStartNumber(t)) {
-        return consumeNumericToken(t);
-      }
-      else {
-        advancePtrToN(t, 1);
-    
-        return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-      }
-    }
-
-    // Comma (,)
-    if(*start->bytePtr == ',') {
-      advancePtrToN(t, 1);
-
-      return makeToken(TOKEN_COMMA, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-    }
-
-    // Identifiers
-    if (isIdentStartCodePoint(start->bytePtr)) {
-      return consumeIdentLikeToken(t);
-    }
-
-    // Digit
-    if(isDigit(start->bytePtr)) {
-      return consumeNumericToken(t);
-    }
-
-    // Hyphen/Minus sign (-)
-    if(*start->bytePtr == '-') {
-      const char *nxtPtr = peekPtrAtN(t, 1)->bytePtr;
-      const char *nxt2Ptr = peekPtrAtN(t, 2)->bytePtr;
-
-      if(isNextThreeCodePointStartNumber(t)) {
-        return consumeNumericToken(t);
-      }
-      else if(*nxtPtr == '-' && *nxt2Ptr == '>') {
-        advancePtrToN(t, 3);
-
-        return makeToken(TOKEN_CDC, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-      }
-      else if(isNextThreeCodePointStartAnIdentSequence(t)) {
+        return tok_next(t);
+      case IDENTIFIER_STATE: 
+        // Identifiers
+        t->state = DATA_STATE;
         return consumeIdentLikeToken(t);
-      }
-      else {
-        advancePtrToN(t, 1);
 
-        return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-      }
-    }
+        break;
 
-    // Full stop (.)
-    if(*start->bytePtr == '.') {
-      if(isNextThreeCodePointStartNumber(t)) {
+      case STRING_STATE:
+        // Double or single quotation mark (")
+        t->state = DATA_STATE;
+        return consumeString(t, *start->bytePtr);
+
+        break;
+
+      case NUMBER_STATE:
+        // Digit
+        t->state = DATA_STATE;
         return consumeNumericToken(t);
-      }
-      else {
-        advancePtrToN(t, 1);
 
-        return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-      }
-    }
+        break;
 
-    // Semicolon (;)
-    if(*start->bytePtr == ';') {
-      advancePtrToN(t, 1);
+      case WHITESPACE_STATE:
+        // Whitespace
+        while (t->curr < t->end && isWhitespace(t->curr->bytePtr)) {
+          advancePtrToN(t, 1);
+        }
 
-      return makeToken(TOKEN_SEMICOLON, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-    }
+        t->state = DATA_STATE;
+        return makeToken(TOKEN_WHITESPACE, TOKEN_KIND_VALID, start, t->curr - start, line, column);
 
-    // Colon (:)
-    if(*start->bytePtr == ':') {
-      advancePtrToN(t, 1);
+        break;
 
-      return makeToken(TOKEN_COLON, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-    }
+      case DELIM_STATE:
+        t->state = DATA_STATE;
 
-    // Less than sign (<)
-    if(*start->bytePtr == '<') {
-      const char *nxtPtr = peekPtrAtN(t, 1)->bytePtr;
-      const char *nxt2Ptr = peekPtrAtN(t, 2)->bytePtr;
-      const char *nxt3Ptr = peekPtrAtN(t, 3)->bytePtr;
+        // Comments or '/'
+        if(*start->bytePtr == '/') {
+          return consumeCommentOrDelim(t, '/');
+        }
 
-      if(*nxtPtr == '!' && *nxt2Ptr == '-' && *nxt3Ptr == '-') {
-        advancePtrToN(t, 3);
+        // Number sign (#)
+        if(*start->bytePtr == '#') {
+          advancePtrToN(t, 1);
 
-        return makeToken(TOKEN_CDO, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-      }
-      else {
-        advancePtrToN(t, 1);
+          const DecodedStream *nxtPtr = t->curr;
+          if(isIdentCodePoint(nxtPtr) || (isNCodePointValidEscape(t, 0) && isNCodePointValidEscape(t, 1))) {
+            if(isNextThreeCodePointStartAnIdentSequence(t)) {
+              const DecodedStream *currStream = consumeIdentSequence(t);
 
-        return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-      }
-    }
+              return makeToken(TOKEN_HASH, TOKEN_KIND_VALID, start, currStream - start, line, column);
+            }
+          }
+          else {
+            advancePtrToN(t, 1);
 
-    // Commercial 'AT' symbol (@)
-    if(*start->bytePtr == '@') {
-      advancePtrToN(t, 1);
+            return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+          }
+        }
 
-      if(isNextThreeCodePointStartAnIdentSequence(t)) {
-        const DecodedStream *currStream = consumeIdentSequence(t);
+        // Left parenthesis (()
+        if(*start->bytePtr == '(') {
+          advancePtrToN(t, 1);
 
-        return makeToken(TOKEN_AT_KEYWORD, TOKEN_KIND_VALID, start, currStream - start, line, column);
-      }
-      else {
-        return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-      }
-    }
+          return makeToken(TOKEN_LEFT_PAREN, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+        }
 
-    // Left square bracket ([)
-    if(*start->bytePtr == '[') {
-      advancePtrToN(t, 1);
+        // Right parenthesis ())
+        if(*start->bytePtr == ')') {
+          advancePtrToN(t, 1);
 
-      return makeToken(TOKEN_LEFT_SQUARE, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-    }
+          return makeToken(TOKEN_RIGHT_PAREN, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+        }
 
-    // Reverse solidus (\)
-    if(*start->bytePtr == '\\') {
-      if(isNCodePointValidEscape(t, 1)) {
-        advancePtrToN(t, 1);
-
-        return consumeIdentLikeToken(t);
-      }
-      else {
-        // [PARSE ERR] end of file was reached before the end of string
-        logDiagnostic("Invalid escape sequence", start->bytePtr, line, column);
-
-        advancePtrToN(t, 1);
-
-        return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-      }
-    }
-
-    // Right square bracket (])
-    if(*start->bytePtr == ']') {
-      advancePtrToN(t, 1);
-
-      return makeToken(TOKEN_RIGHT_SQUARE, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-    }
-
-    // Left curly bracket ({)
-    if(*start->bytePtr == '{') {
-      advancePtrToN(t, 1);
-
-      return makeToken(TOKEN_LEFT_CURLY, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-    }
-
-    // Right curly bracket (})
-    if(*start->bytePtr == '}') {
-      advancePtrToN(t, 1);
-
-      return makeToken(TOKEN_RIGHT_CURLY, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-    }
+        // Plus sign (+)
+        if(*start->bytePtr == '+') {
+          if(isNextThreeCodePointStartNumber(t)) {
+            return consumeNumericToken(t);
+          }
+          else {
+            advancePtrToN(t, 1);
     
+            return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+          }
+        }
+
+        // Comma (,)
+        if(*start->bytePtr == ',') {
+          advancePtrToN(t, 1);
+
+          return makeToken(TOKEN_COMMA, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+        }
+
+        // Hyphen/Minus sign (-)
+        if(*start->bytePtr == '-') {
+          const char *nxtPtr = peekPtrAtN(t, 1)->bytePtr;
+          const char *nxt2Ptr = peekPtrAtN(t, 2)->bytePtr;
+
+          if(isNextThreeCodePointStartNumber(t)) {
+            return consumeNumericToken(t);
+          }
+          else if(*nxtPtr == '-' && *nxt2Ptr == '>') {
+            advancePtrToN(t, 3);
+
+            return makeToken(TOKEN_CDC, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+          }
+          else if(isNextThreeCodePointStartAnIdentSequence(t)) {
+            return consumeIdentLikeToken(t);
+          }
+          else {
+            advancePtrToN(t, 1);
+
+            return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+          }
+        }
+
+        // Full stop (.)
+        if(*start->bytePtr == '.') {
+          if(isNextThreeCodePointStartNumber(t)) {
+            return consumeNumericToken(t);
+          }
+          else {
+            advancePtrToN(t, 1);
+
+            return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+          }
+        }
+
+        // Semicolon (;)
+        if(*start->bytePtr == ';') {
+          advancePtrToN(t, 1);
+
+          return makeToken(TOKEN_SEMICOLON, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+        }
+
+        // Colon (:)
+        if(*start->bytePtr == ':') {
+          advancePtrToN(t, 1);
+
+          return makeToken(TOKEN_COLON, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+        }
+
+        // Less than sign (<)
+        if(*start->bytePtr == '<') {
+          const char *nxtPtr = peekPtrAtN(t, 1)->bytePtr;
+          const char *nxt2Ptr = peekPtrAtN(t, 2)->bytePtr;
+          const char *nxt3Ptr = peekPtrAtN(t, 3)->bytePtr;
+
+          if(*nxtPtr == '!' && *nxt2Ptr == '-' && *nxt3Ptr == '-') {
+            advancePtrToN(t, 3);
+
+            return makeToken(TOKEN_CDO, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+          }
+          else {
+            advancePtrToN(t, 1);
+
+            return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+          }
+        }
+
+        // Commercial 'AT' symbol (@)
+        if(*start->bytePtr == '@') {
+          advancePtrToN(t, 1);
+
+          if(isNextThreeCodePointStartAnIdentSequence(t)) {
+            const DecodedStream *currStream = consumeIdentSequence(t);
+
+            return makeToken(TOKEN_AT_KEYWORD, TOKEN_KIND_VALID, start, currStream - start, line, column);
+          }
+          else {
+            return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+          }
+        }
+
+        // Left square bracket ([)
+        if(*start->bytePtr == '[') {
+          advancePtrToN(t, 1);
+
+          return makeToken(TOKEN_LEFT_SQUARE, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+        }
+
+        // Reverse solidus (\)
+        if(*start->bytePtr == '\\') {
+          if(isNCodePointValidEscape(t, 1)) {
+            advancePtrToN(t, 1);
+
+            return consumeIdentLikeToken(t);
+          }
+          else {
+            // [PARSE ERR] end of file was reached before the end of string
+            logDiagnostic("Invalid escape sequence", start->bytePtr, line, column);
+
+            advancePtrToN(t, 1);
+
+            return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+          }
+        }
+
+        // Right square bracket (])
+        if(*start->bytePtr == ']') {
+          advancePtrToN(t, 1);
+
+          return makeToken(TOKEN_RIGHT_SQUARE, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+        }
+
+        // Left curly bracket ({)
+        if(*start->bytePtr == '{') {
+          advancePtrToN(t, 1);
+
+          return makeToken(TOKEN_LEFT_CURLY, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+        }
+
+        // Right curly bracket (})
+        if(*start->bytePtr == '}') {
+          advancePtrToN(t, 1);
+
+          return makeToken(TOKEN_RIGHT_CURLY, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+        }
+
+        // Anything else as a delim
+        advancePtrToN(t, 1);
+        return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+
+      default:
+        printf("Unknown tokenizer state: %d\n", t->state);
+        exit(1);
+    }
+
     // EOF
     if(isEof(t)) {
       return makeToken(TOKEN_EOF, TOKEN_KIND_VALID, t->curr, t->curr - start, line, column);
     }
 
-    // Anything else as a delim
-    advancePtrToN(t, 1);
-    return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
   }
 
   // If we fall through the loop, return EOF
