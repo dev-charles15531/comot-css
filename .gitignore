@@ -14,4 +14,4 @@ build
 
 # Ignore hash-named corpus files
 tests/fuzz/corpus/[0-9a-f]*
-
+crashes

@@ -19,6 +19,9 @@ Tokenizer *tokCreate(const uint8_t *raw, size_t len, Arena *arena) {
     return NULL;
 
   size_t count = decodeCssInput(raw, len, s, len);
+  if(count == 0)
+    return NULL;
+
   printf("Decoded %zu code points.\n", count);
 
   Tokenizer *t = arena_alloc(arena, sizeof(Tokenizer), ARENA_ALIGNMENT);

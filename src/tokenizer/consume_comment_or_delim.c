@@ -6,39 +6,36 @@ Token consumeCommentOrDelim(Tokenizer *t, char codePoint) {
   const DecodedStream *tCurr = t->curr;
 
   const DecodedStream *c = peekPtrAtN(t, 1);
-  if(!c) {
-    // [PARSE ERR] end of file was reached before the end of comment
+  if (!c) {
+    // [PARSE ERR] end of file was reached before the start of comment
     return emitErrorToken(t, "Unexpected end of file", tCurr, t->curr - tCurr, t->line, t->column);
   }
 
-  if(*c->bytePtr == '*') {   // this should be a comment[start]
+  if (*c->bytePtr == '*') {
+    // beginning of a comment: "/*"
     advancePtrToN(t, 1);
 
-    while(!isEof(t)) {
+    while (1) {
       c = peekPtrAtN(t, 1);
       const DecodedStream *cNext = peekPtrAtN(t, 2);
-      if(!c || !cNext) {
+      if (!c || !cNext) {
         // [PARSE ERR] end of file was reached before the end of comment
         return emitErrorToken(t, "Unexpected end of file", tCurr, t->curr - tCurr, t->line, t->column);
       }
 
-      // if this is the end of the comment
-      if(*c->bytePtr == '*' && *cNext->bytePtr == codePoint) {
-        advancePtrToN(t, 2);
-
+      if (*c->bytePtr == '*' && *cNext->bytePtr == codePoint) {
+        advancePtrToN(t, 3);  // advance past the closing `*/`
+        
         return makeToken(TOKEN_COMMENT, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, t->line, t->column);
       }
 
-      // consume next
       advancePtrToN(t, 1);
     }
-
-    // [PARSE ERR] end of file was reached before the end of comment
-    return emitErrorToken(t, "Unexpected end of file", tCurr, t->curr - tCurr, t->line, t->column);
-  }
-  else {  // it's not a comment.
+  } else {
+    // Not a comment; treat as a delimiter
     advancePtrToN(t, 1);
 
     return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, t->line, t->column);
   }
 }
+
