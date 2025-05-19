@@ -33,11 +33,11 @@ Token emitErrorToken(Tokenizer *t, const char* message, const DecodedStream *val
 
 bool isNCodePointValidEscape(Tokenizer *t, size_t n) {
   const DecodedStream *currCodePointPtr = peekPtrAtN(t, n);
-  if(currCodePointPtr && *currCodePointPtr->bytePtr != '\\')
+  if(!currCodePointPtr || *currCodePointPtr->bytePtr != '\\')
     return false;
 
   const DecodedStream *nextCodePointPtr = peekPtrAtN(t, n + 1);
-  if(nextCodePointPtr && *nextCodePointPtr->bytePtr == '\n')
+  if(!nextCodePointPtr || *nextCodePointPtr->bytePtr == '\n')
     return false;
 
   return true;

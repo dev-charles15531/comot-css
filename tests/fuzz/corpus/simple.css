@@ -1,11 +1,10 @@
-/* Start of malformed CSS */
 body {
     color: red;
     font-size: 12px;
     background-color: #f0f0f0;
     margin: 10px 5px 20px 5px; /* Normal shorthand syntax */
     padding: 0 5px 10px;
-    font-family: "Helvetica, Arial, sans-serif;
+    font-family: "Helvetica, Arial, sans-serif";
     border: 1px solid #000;
 }
 
@@ -80,6 +79,3 @@ h1 {
 /* Closing with an unclosed comment */
 body {
     background-color: #fff; /* Unclosed comment here
-
-/* End of malformed CSS */
-
