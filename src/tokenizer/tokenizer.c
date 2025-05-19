@@ -307,11 +307,11 @@ Token tokNext(Tokenizer *t) {
 
     // EOF
     if(isEof(t)) {
-      return makeToken(TOKEN_EOF, TOKEN_KIND_VALID, t->curr, t->curr - start, line, column);
+      return makeToken(TOKEN_EOF, TOKEN_KIND_VALID, t->curr, 0, line, column);
     }
 
   }
 
   // If we fall through the loop, return EOF
-  return makeToken(TOKEN_EOF, TOKEN_KIND_VALID, t->curr, t->curr - t->start, t->line, t->column);
+  return makeToken(TOKEN_EOF, TOKEN_KIND_VALID, t->curr, 0, t->line, t->column);
 }
