@@ -5,13 +5,17 @@
 
 static void consumeReminantsOfBadUrl(Tokenizer *t) {
   while(advancePtrToN(t, 1)) {
-    if(*t->curr->bytePtr == ')' || isEof(t)) {
+    if(isEof(t))
       return;
-    }
 
-    if(isNCodePointValidEscape(t, 0)) {
-      consumeEscapedCodePoint(t); // NOTE: no code point is returned from this function
-    }
+    if(!t->curr || !t->curr->bytePtr)
+      return;
+
+    if(*t->curr->bytePtr == ')')
+      return;
+
+    if(isNCodePointValidEscape(t, 0))
+      consumeEscapedCodePoint(t);
   }
 }
 
@@ -21,63 +25,65 @@ Token consumeUrlToken(Tokenizer *t) {
   size_t startCol = t->column;
 
   while(isWhitespace(t->curr->bytePtr)) {
-    advancePtrToN(t, 1);
+    if(!advancePtrToN(t, 1))
+      break;
   }
 
-  while(t->curr) {
-    const char *charAtCurrPtr = t->curr->bytePtr;
-    if(*charAtCurrPtr == ')') {
-      return makeToken(TOKEN_URL, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, startLine, startCol);
+  while(t->curr && t->curr < t->end) {
+    if(!t->curr->bytePtr) {
+      logDiagnostic("Null bytePtr in tokenizer stream", t->curr ? t->curr->bytePtr : NULL, t->line, t->column);
+      
+      return makeToken(TOKEN_BAD_URL, TOKEN_KIND_ERROR, tCurr, t->curr - tCurr, startLine, startCol);
     }
 
+    const char *charAtCurrPtr = t->curr->bytePtr;
+
+    if(*charAtCurrPtr == ')')
+      return makeToken(TOKEN_URL, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, startLine, startCol);
+
     if(isEof(t)) {
-      // [PARSE ERR] end of file was reached before the end of string
       logDiagnostic("Unexpected end of file", tCurr->bytePtr, startLine, startCol);
 
       return makeToken(TOKEN_URL, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, startLine, startCol);
     }
 
     if(isWhitespace(charAtCurrPtr)) {
-      while(isWhitespace(t->curr->bytePtr)) {
-        advancePtrToN(t, 1);
+      while(t->curr && t->curr->bytePtr && isWhitespace(t->curr->bytePtr)) {
+        if(!advancePtrToN(t, 1))
+          break;
       }
 
-      if(*t->curr->bytePtr == ')' || isEof(t)) {
+      if(!t->curr || !t->curr->bytePtr || *t->curr->bytePtr == ')' || isEof(t)) {
         if(isEof(t)) {
-          // [PARSE ERR] end of file was reached before the end of string
           logDiagnostic("Unexpected end of file", tCurr->bytePtr, startLine, startCol);
         }
 
         advancePtrToN(t, 1);
-
+            
         return makeToken(TOKEN_URL, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, startLine, startCol);
-      }
+      } 
       else {
         consumeReminantsOfBadUrl(t);
-
+       
         return makeToken(TOKEN_BAD_URL, TOKEN_KIND_ERROR, tCurr, t->curr - tCurr, startLine, startCol);
       }
     }
 
     if(*charAtCurrPtr == '"' || *charAtCurrPtr == '\'' || *charAtCurrPtr == '(') {
-      // [PARSE ERR] end of file was reached before the end of string
       logDiagnostic("Non printable code point", tCurr->bytePtr, startLine, startCol);
-
       consumeReminantsOfBadUrl(t);
-
+      
       return makeToken(TOKEN_BAD_URL, TOKEN_KIND_ERROR, tCurr, t->curr - tCurr, startLine, startCol);
     }
 
     if(*charAtCurrPtr == '\\') {
       if(isNCodePointValidEscape(t, 0)) {
-        consumeEscapedCodePoint(t); // NOTE: no code point is returned from this function
-      }
+        consumeEscapedCodePoint(t);
+      } 
       else {
-        // [PARSE ERR] end of file was reached before the end of string
         logDiagnostic("Invalid escape sequence", tCurr->bytePtr, startLine, startCol);
-
         consumeReminantsOfBadUrl(t);
-
+         
         return makeToken(TOKEN_BAD_URL, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, startLine, startCol);
       }
 
@@ -87,6 +93,6 @@ Token consumeUrlToken(Tokenizer *t) {
     // advance pointer
     advancePtrToN(t, 1);
   }
-
+  
   return makeToken(TOKEN_BAD_URL, TOKEN_KIND_VALID, tCurr, t->curr - tCurr, startLine, startCol);
 }

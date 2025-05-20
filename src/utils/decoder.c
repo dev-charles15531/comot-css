@@ -1,40 +1,53 @@
 #include "decoder.h"
 
+#define MAX_CSS_INPUT_LEN (1 << 20)        // 1MB max input
+#define MAX_DECODED_OUTPUT_CAP (1 << 19)   // 512k decoded code points
+#define MAX_CHARSET_LEN 32                 // Max declared charset length
+
 void tryExtractCharset(const uint8_t *data, size_t len, char *charset) {
   const char *prefix = "@charset \"";
-  size_t prefixLen = strlen(prefix);
+  const size_t prefixLen = strlen(prefix);
+  const size_t minRequiredLen = prefixLen + 3; // "@charset ""x"""
 
-  if(len < prefixLen + 1)
+  if(!data || len < minRequiredLen || !charset)
     return;
+
+  charset[0] = '\0'; // Ensure empty if nothing found
 
   const uint8_t *p = data;
   const uint8_t *end = data + len - prefixLen - 1;
 
   while((p = memchr(p, '@', end - p))) {
-    if((size_t) (end - p) < prefixLen)
+    if((size_t)(end - p) < prefixLen)
       break;
 
     if(memcmp(p, prefix, prefixLen) == 0) {
-      const char *start = (const char *) (p + prefixLen);
+      const char *start = (const char *)(p + prefixLen);
       const uint8_t *limit = data + len;
-      const char *endQuote = memchr(start, '"', limit - (const uint8_t *) start);
+      const char *endQuote = memchr(start, '"', limit - (const uint8_t *)start);
 
-      if(endQuote && (endQuote - start) < 32) {
-        size_t len = endQuote - start;
-        memcpy(charset, start, len);
-        charset[len] = '\0';
-
+      if(endQuote && (endQuote - start) < MAX_CHARSET_LEN) {
+        size_t charsetLen = endQuote - start;
+        memcpy(charset, start, charsetLen);
+        charset[charsetLen] = '\0';
+        
         return;
       }
     }
 
-    ++ p;
+    p++;
   }
 }
 
-Encoding detectEncoding(const uint8_t *data, size_t len, char **declaredCharset) {
-  *declaredCharset = NULL;
+Encoding detectEncoding(const uint8_t *data, size_t len, char *declaredCharset) {
+  // Strict input validation
+  if(!data || len == 0 || !declaredCharset)
+    return ENCODING_UTF8;
 
+  // Initialize output
+  declaredCharset[0] = '\0';
+
+  // BOM detection with bounds checking
   if(len >= 2) {
     if(data[0] == 0xFF && data[1] == 0xFE)
       return ENCODING_UTF16LE;
@@ -45,11 +58,29 @@ Encoding detectEncoding(const uint8_t *data, size_t len, char **declaredCharset)
   if(len >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF)
     return ENCODING_UTF8;
 
-  tryExtractCharset(data, len > 1024 ? 1024 : len, *declaredCharset);
-  if(*declaredCharset && strcmp(*declaredCharset, "utf-8") == 0)
-    return ENCODING_UTF8;
+  // Safe charset extraction
+  if(len > 1024) {
+    tryExtractCharset(data, 1024, declaredCharset);
+  }
+  else {
+    tryExtractCharset(data, len, declaredCharset);
+  }
 
-  return ENCODING_UTF8; // fallback
+  // Validate declared charset
+  if(declaredCharset[0] != '\0') {
+    char normalized[MAX_CHARSET_LEN];
+    size_t i;
+    for(i = 0; i < sizeof(normalized)-1 && declaredCharset[i]; i++) {
+      normalized[i] = tolower(declaredCharset[i]);
+    }
+
+    normalized[i] = '\0';
+
+    if(strcmp(normalized, "utf-8") == 0)
+      return ENCODING_UTF8;
+  }
+
+  return ENCODING_UTF8; // Default fallback
 }
 
 size_t normalizeCodePoints(DecodedStream *input, size_t len) {
@@ -79,9 +110,17 @@ int isValidUtf8Cont(uint8_t b) {
 }
 
 size_t decodeUtf8(const uint8_t *in, size_t len, DecodedStream *out, size_t cap) {
+  if (!in || !out || cap == 0 || len == 0)
+    return 0;
+
   size_t i = 0, o = 0;
+  const uint8_t *end = in + len;
 
   while(i < len && o < cap) {
+    // if enough bytes remaining
+    if(in + i >= end)
+      break;
+
     uint8_t b = in[i];
 
     out[o].bytePtr = (const char *) (in + i); 
@@ -115,9 +154,17 @@ size_t decodeUtf8(const uint8_t *in, size_t len, DecodedStream *out, size_t cap)
 }
 
 size_t decodeUtf16(const uint8_t *in, size_t len, DecodedStream *out, size_t cap, int le) {
+  if(!in || !out || cap == 0 || len == 0)
+    return 0;
+
   size_t i = 0, o = 0;
+  const uint8_t *end = in + len;
 
   while(i + 1 < len && o < cap) {
+    // if enough bytes remaining
+    if(in + i >= end)
+      break;
+
     out[o].bytePtr = (const char *) (in + i); 
 
     uint16_t w1 = le ? (in[i] | (in[i+1] << 8)) : ((in[i] << 8) | in[i+1]);
@@ -141,22 +188,53 @@ size_t decodeUtf16(const uint8_t *in, size_t len, DecodedStream *out, size_t cap
 }
 
 size_t decodeCssInput(const uint8_t *raw, size_t len, DecodedStream *out, size_t cap) {
-  char *declCharset = NULL;
-  Encoding enc = detectEncoding(raw, len, &declCharset);
+  if(!raw || !out || cap == 0 || len == 0)
+    return 0;
 
-  // Skip BOM
+  // Strict bounds checking
+  if(len > MAX_CSS_INPUT_LEN)
+    len = MAX_CSS_INPUT_LEN;
+  if(cap > MAX_DECODED_OUTPUT_CAP)
+    cap = MAX_DECODED_OUTPUT_CAP;
+  if(cap == 0)
+    return 0;
+
+  // Early rejection of suspicious patterns
+  size_t suspiciousNulls = 0;
+  size_t checkLen = len < 1024 ? len : 1024;
+  for(size_t i = 0; i < checkLen; ++i) {
+    if(raw[i] == 0x00) {
+      if(++suspiciousNulls > 800) {
+        return 0;
+      }
+    }
+    else if(raw[i] == 0xFF || raw[i] == 0xFE) {
+      if(i > 0 && (raw[i-1] == 0xFF || raw[i-1] == 0xFE)) {
+        return 0;  // Reject sequences of 0xFF/0xFE
+      }
+    }
+  }
+
+  // Detect encoding via BOM or @charset
+  char declaredCharset[MAX_CHARSET_LEN] = {0};
+  Encoding enc = detectEncoding(raw, len, &declaredCharset[0]);
+
+  // Handle BOM
   if(enc == ENCODING_UTF8 && len >= 3 && raw[0] == 0xEF && raw[1] == 0xBB && raw[2] == 0xBF) {
-    raw += 3; len -= 3;
+    raw += 3;
+    len -= 3;
   }
   else if((enc == ENCODING_UTF16LE || enc == ENCODING_UTF16BE) && len >= 2) {
-    raw += 2; len -= 2;
+    raw += 2;
+    len -= 2;
   }
 
   size_t count = 0;
+
   if(enc == ENCODING_UTF8) {
     count = decodeUtf8(raw, len, out, cap);
   }
-  else if (enc == ENCODING_UTF16LE || enc == ENCODING_UTF16BE) {
+  else if(enc == ENCODING_UTF16LE || enc == ENCODING_UTF16BE) {
     count = decodeUtf16(raw, len, out, cap, enc == ENCODING_UTF16LE);
   }
 

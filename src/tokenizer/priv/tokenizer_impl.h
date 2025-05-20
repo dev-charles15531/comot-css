@@ -40,27 +40,13 @@ static inline bool isEof(Tokenizer *t) {
 }
 
 static inline const DecodedStream *peekPtrAtN(Tokenizer *t, size_t n) {
-  const DecodedStream *ptr = t->curr;
+  if (t->curr + n >= t->end)
+    return NULL;
 
-  for(size_t i = 0; i < n; i++) {
-    if(ptr >= t->end)
-      return NULL;
-
-    ptr++;
-  }
-
-  return (ptr >= t->end) ? NULL : ptr;
+  return t->curr + n;
 }
 
 static inline const DecodedStream *advancePtrToN(Tokenizer *t, size_t n) {
-  const DecodedStream *nextPtr = peekPtrAtN(t, n);
-
-  if(nextPtr == NULL) {
-    t->curr = t->end;
-
-    return t->curr;
-  }
-
   for(size_t i = 0; i < n && t->curr < t->end; i++) {
     if(t->curr->bytePtr && *t->curr->bytePtr == '\n') {
       t->line++;
@@ -73,7 +59,7 @@ static inline const DecodedStream *advancePtrToN(Tokenizer *t, size_t n) {
     t->curr++;
   }
 
-  return t->curr;
+  return t->curr < t->end ? t->curr : NULL;
 }
 
 static inline const DecodedStream *ptrLookback(Tokenizer *t) {

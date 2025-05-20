@@ -60,17 +60,17 @@ Token tokNext(Tokenizer *t) {
     // NOTE: FSM RUN
     switch(t->state) {
       case DATA_STATE:
-        if(isIdentStartCodePoint(start->bytePtr)) {
+        if(start && start->bytePtr && isIdentStartCodePoint(start->bytePtr)) {
           // Possibly start of identifier
           t->state = IDENTIFIER_STATE;
         }
-        else if(*start->bytePtr == '"' || *start->bytePtr == '\'') {
+        else if(start && start->bytePtr && (*start->bytePtr == '"' || *start->bytePtr == '\'')) {
           t->state = STRING_STATE;
         }
-        else if(isDigit(start->bytePtr)) {
+        else if(start && start->bytePtr && isDigit(start->bytePtr)) {
           t->state = NUMBER_STATE;
         }
-        else if (t->curr < t->end && isWhitespace(start->bytePtr)) {
+        else if (start && start->bytePtr && t->curr < t->end && isWhitespace(start->bytePtr)) {
           t->state = WHITESPACE_STATE;
         }
         else {
@@ -81,7 +81,8 @@ Token tokNext(Tokenizer *t) {
       case IDENTIFIER_STATE: 
         // Identifiers
         t->state = DATA_STATE;
-        return consumeIdentLikeToken(t);
+        if(start && start->bytePtr && isIdentCodePoint(start))
+          return consumeIdentLikeToken(t);
 
         break;
 
@@ -102,7 +103,8 @@ Token tokNext(Tokenizer *t) {
       case WHITESPACE_STATE:
         // Whitespace
         while (t->curr < t->end && isWhitespace(t->curr->bytePtr)) {
-          advancePtrToN(t, 1);
+          if(!advancePtrToN(t, 1))
+            break;
         }
 
         t->state = DATA_STATE;
@@ -114,12 +116,12 @@ Token tokNext(Tokenizer *t) {
         t->state = DATA_STATE;
 
         // Comments or '/'
-        if(*start->bytePtr == '/') {
+        if(start && start->bytePtr && *start->bytePtr == '/') {
           return consumeCommentOrDelim(t, '/');
         }
 
         // Number sign (#)
-        if(*start->bytePtr == '#') {
+        if(start && start->bytePtr && *start->bytePtr == '#') {
           advancePtrToN(t, 1);
 
           const DecodedStream *nxtPtr = t->curr;
@@ -138,21 +140,21 @@ Token tokNext(Tokenizer *t) {
         }
 
         // Left parenthesis (()
-        if(*start->bytePtr == '(') {
+        if(start && start->bytePtr && *start->bytePtr == '(') {
           advancePtrToN(t, 1);
 
           return makeToken(TOKEN_LEFT_PAREN, TOKEN_KIND_VALID, start, t->curr - start, line, column);
         }
 
         // Right parenthesis ())
-        if(*start->bytePtr == ')') {
+        if(start && start->bytePtr && *start->bytePtr == ')') {
           advancePtrToN(t, 1);
 
           return makeToken(TOKEN_RIGHT_PAREN, TOKEN_KIND_VALID, start, t->curr - start, line, column);
         }
 
         // Plus sign (+)
-        if(*start->bytePtr == '+') {
+        if(start && start->bytePtr && *start->bytePtr == '+') {
           if(isNextThreeCodePointStartNumber(t)) {
             return consumeNumericToken(t);
           }
@@ -164,37 +166,46 @@ Token tokNext(Tokenizer *t) {
         }
 
         // Comma (,)
-        if(*start->bytePtr == ',') {
+        if(start && start->bytePtr && *start->bytePtr == ',') {
           advancePtrToN(t, 1);
 
           return makeToken(TOKEN_COMMA, TOKEN_KIND_VALID, start, t->curr - start, line, column);
         }
 
         // Hyphen/Minus sign (-)
-        if(*start->bytePtr == '-') {
+        if(start && start->bytePtr && *start->bytePtr == '-') {
           const DecodedStream *nxtPtr = peekPtrAtN(t, 1);
           const DecodedStream *nxt2Ptr = peekPtrAtN(t, 2);
 
-          if(isNextThreeCodePointStartNumber(t)) {
-            return consumeNumericToken(t);
-          }
-          else if(nxtPtr && *nxtPtr->bytePtr == '-' && nxt2Ptr && *nxt2Ptr->bytePtr == '>') {
-            advancePtrToN(t, 3);
-
-            return makeToken(TOKEN_CDC, TOKEN_KIND_VALID, start, t->curr - start, line, column);
-          }
-          else if(isNextThreeCodePointStartAnIdentSequence(t)) {
-            return consumeIdentLikeToken(t);
-          }
+          // Validate next two pointers and their bytePtrs
+          if(nxtPtr && nxt2Ptr) {
+            if(isNextThreeCodePointStartNumber(t)) {
+              
+              return consumeNumericToken(t);
+            }
+            else if(*nxtPtr->bytePtr == '-' && *nxt2Ptr->bytePtr == '>') {
+              advancePtrToN(t, 3);
+            
+              return makeToken(TOKEN_CDC, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+            }
+            else if(isNextThreeCodePointStartAnIdentSequence(t)) {
+              return consumeIdentLikeToken(t);
+            }
+            else {
+              advancePtrToN(t, 1);
+            
+              return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+            }
+          } 
           else {
             advancePtrToN(t, 1);
-
+          
             return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
           }
         }
 
         // Full stop (.)
-        if(*start->bytePtr == '.') {
+        if(start && start->bytePtr && *start->bytePtr == '.') {
           if(isNextThreeCodePointStartNumber(t)) {
             return consumeNumericToken(t);
           }
@@ -206,21 +217,21 @@ Token tokNext(Tokenizer *t) {
         }
 
         // Semicolon (;)
-        if(*start->bytePtr == ';') {
+        if(start && start->bytePtr && *start->bytePtr == ';') {
           advancePtrToN(t, 1);
 
           return makeToken(TOKEN_SEMICOLON, TOKEN_KIND_VALID, start, t->curr - start, line, column);
         }
 
         // Colon (:)
-        if(*start->bytePtr == ':') {
+        if(start && start->bytePtr && *start->bytePtr == ':') {
           advancePtrToN(t, 1);
 
           return makeToken(TOKEN_COLON, TOKEN_KIND_VALID, start, t->curr - start, line, column);
         }
 
         // Less than sign (<)
-        if(*start->bytePtr == '<') {
+        if(start && start->bytePtr && *start->bytePtr == '<') {
           const DecodedStream *nxtPtr = peekPtrAtN(t, 1);
           const DecodedStream *nxt2Ptr = peekPtrAtN(t, 2);
           const DecodedStream *nxt3Ptr = peekPtrAtN(t, 3);
@@ -238,7 +249,7 @@ Token tokNext(Tokenizer *t) {
         }
 
         // Commercial 'AT' symbol (@)
-        if(*start->bytePtr == '@') {
+        if(start && start->bytePtr && *start->bytePtr == '@') {
           advancePtrToN(t, 1);
 
           if(isNextThreeCodePointStartAnIdentSequence(t)) {
@@ -252,45 +263,45 @@ Token tokNext(Tokenizer *t) {
         }
 
         // Left square bracket ([)
-        if(*start->bytePtr == '[') {
+        if(start && start->bytePtr && *start->bytePtr == '[') {
           advancePtrToN(t, 1);
 
           return makeToken(TOKEN_LEFT_SQUARE, TOKEN_KIND_VALID, start, t->curr - start, line, column);
         }
 
         // Reverse solidus (\)
-        if(*start->bytePtr == '\\') {
+        if(start && start->bytePtr && *start->bytePtr == '\\') {
           if(isNCodePointValidEscape(t, 1)) {
-            advancePtrToN(t, 1);
-
-            return consumeIdentLikeToken(t);
+            if(advancePtrToN(t, 1))
+              return consumeIdentLikeToken(t);
           }
           else {
             // [PARSE ERR] end of file was reached before the end of string
             logDiagnostic("Invalid escape sequence", start->bytePtr, line, column);
 
             advancePtrToN(t, 1);
+            size_t delta = (t->curr >= start) ? (t->curr - start) : 0;
 
-            return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, t->curr - start, line, column);
+            return makeToken(TOKEN_DELIM, TOKEN_KIND_VALID, start, delta, line, column);
           }
         }
 
         // Right square bracket (])
-        if(*start->bytePtr == ']') {
+        if(start && start->bytePtr && *start->bytePtr == ']') {
           advancePtrToN(t, 1);
 
           return makeToken(TOKEN_RIGHT_SQUARE, TOKEN_KIND_VALID, start, t->curr - start, line, column);
         }
 
         // Left curly bracket ({)
-        if(*start->bytePtr == '{') {
+        if(start && start->bytePtr && *start->bytePtr == '{') {
           advancePtrToN(t, 1);
 
           return makeToken(TOKEN_LEFT_CURLY, TOKEN_KIND_VALID, start, t->curr - start, line, column);
         }
 
         // Right curly bracket (})
-        if(*start->bytePtr == '}') {
+        if(start && start->bytePtr && *start->bytePtr == '}') {
           advancePtrToN(t, 1);
 
           return makeToken(TOKEN_RIGHT_CURLY, TOKEN_KIND_VALID, start, t->curr - start, line, column);

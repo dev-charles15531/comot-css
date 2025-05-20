@@ -5,17 +5,20 @@
 const DecodedStream *consumeIdentSequence(Tokenizer *t) {
   const DecodedStream *startPtr = t->curr;
 
-  while(advancePtrToN(t, 1)) {
-    if(isIdentCodePoint(t->curr))
+  while(true) {
+    if(!advancePtrToN(t, 1))
+      break;
+
+    if(isIdentCodePoint(t->curr)) {
       continue;
+    } 
     else if(isNCodePointValidEscape(t, 0)) {
-      consumeEscapedCodePoint(t); // NOTE: no code point is returned from this function
-      
+      consumeEscapedCodePoint(t);  // Does internal validation
+
       continue;
-    }
+    } 
     else {
       startPtr = t->curr;
-      // reconsumeCurrInputCodePoint(t);
 
       break;
     }

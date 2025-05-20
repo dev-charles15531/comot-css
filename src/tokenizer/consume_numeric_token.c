@@ -3,42 +3,51 @@
 
 void consumeNumber(Tokenizer *t) {
   if(*t->curr->bytePtr == '+' || *t->curr->bytePtr == '-') {
-    advancePtrToN(t, 1);
+    if (!advancePtrToN(t, 1))
+      return;
   }
 
-  while(isDigit(t->curr->bytePtr)) {
-    advancePtrToN(t, 1);
+  while(t->curr && t->curr->bytePtr && isDigit(t->curr->bytePtr)) {
+    if(!advancePtrToN(t, 1))
+      return;
   }
 
-  if (*t->curr->bytePtr == '.') {
-    const char *afterDot = peekPtrAtN(t, 1)->bytePtr;
-    if (afterDot && isDigit(afterDot)) {
-      advancePtrToN(t, 2); // consume '-' and digits
+  const DecodedStream *afterDotPtr = peekPtrAtN(t, 1);
+  if(t->curr && *t->curr->bytePtr == '.' && afterDotPtr && isDigit(afterDotPtr->bytePtr)) {
+    if(!advancePtrToN(t, 2)) // consume '.' and digit
+      return;
 
-      while (isDigit(t->curr->bytePtr)) {
-        advancePtrToN(t, 1);
+    while(t->curr && isDigit(t->curr->bytePtr)) {
+      if(!advancePtrToN(t, 1))
+        return;
+    }
+  }
+
+  if(t->curr && (*t->curr->bytePtr == 'e' || *t->curr->bytePtr == 'E')) {
+    const DecodedStream *afterE = peekPtrAtN(t, 1);
+    const DecodedStream *afterSign = peekPtrAtN(t, 2);
+
+    if(afterE && isDigit(afterE->bytePtr)) {
+      if(!advancePtrToN(t, 1))
+        return;
+
+      while(t->curr && isDigit(t->curr->bytePtr)) {
+        if(!advancePtrToN(t, 1))
+          return;
+      }
+    }
+    else if(afterE && (*afterE->bytePtr == '+' || *afterE->bytePtr == '-') && afterSign && isDigit(afterSign->bytePtr)) {
+      if (!advancePtrToN(t, 2))
+        return;
+
+      while(t->curr && isDigit(t->curr->bytePtr)) {
+        if(!advancePtrToN(t, 1))
+          return;
       }
     }
   }
-
-  if (*t->curr->bytePtr == 'e' || *t->curr->bytePtr == 'E') {
-    const char *afterE = peekPtrAtN(t, 1)->bytePtr;
-    const char *afterSign = peekPtrAtN(t, 2)->bytePtr;
-
-    if(afterE && isDigit(afterE)) {
-      advancePtrToN(t, 1); // consume 'e'
-
-      while(isDigit(t->curr->bytePtr))
-        advancePtrToN(t, 1);
-    }
-    else if(afterE && (*afterE == '+' || *afterE == '-') && afterSign && isDigit(afterSign)) {
-      advancePtrToN(t, 2); // consume 'e' and '+' or '-'
-
-      while(isDigit(t->curr->bytePtr)) 
-        advancePtrToN(t, 1);
-    }
-  }
 }
+
 
 Token consumeNumericToken(Tokenizer *t) {
   const DecodedStream *tCurr = t->curr;

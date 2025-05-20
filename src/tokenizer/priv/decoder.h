@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #define REPLACEMENT_CHAR 0xFFFD
 #define MAX_INPUT_LEN 1048576
@@ -21,12 +22,11 @@ typedef struct {
   const char *bytePtr;
 } DecodedStream;
 
-
 size_t decodeCssInput(const uint8_t *raw, size_t len, DecodedStream *out, size_t cap);
 
 size_t normalizeCodePoints(DecodedStream *input, size_t len);
 
-Encoding detectEncoding(const uint8_t *data, size_t len, char **declaredCharset);
+Encoding detectEncoding(const uint8_t *data, size_t len, char *declaredCharset);
 
 int isValidUtf8Cont(uint8_t b);
 
