@@ -3,7 +3,17 @@
 #include "comot-css/tokens.h"
 #include "comot-css/diag.h"
 
-
+/**
+ * Consumes a string literal token from the input stream, including the
+ * required opening and closing quotes and any escaped code points.
+ *
+ * If the value is invalid (e.g. unclosed string, invalid escape sequence),
+ * an error token will be returned.
+ *
+ * @param t  The tokenizer
+ * @param endingCodePoint  The character to match for the closing quote
+ * @return  A token representing the string literal
+ */
 Token consumeString(Tokenizer *t, char endingCodePoint) {
   const DecodedStream *startStream = t->curr;
   size_t startLine = t->line;

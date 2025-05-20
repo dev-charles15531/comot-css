@@ -35,17 +35,68 @@ typedef struct Tokenizer {
 } Tokenizer;
 
 // Shared tokenizer helpers
+
+/**
+ * @brief Checks if the tokenizer has reached the end of the input.
+ * 
+ * This function determines whether the current position of the tokenizer
+ * is at or beyond the end of the input stream, indicating that there
+ * are no more tokens to process.
+ * 
+ * @param t Pointer to the Tokenizer instance.
+ * @return true if the tokenizer has reached the end of the input, false otherwise.
+ */
 static inline bool isEof(Tokenizer *t) {
   return t->curr >= t->end;
 }
 
+/**
+ * @brief Looks ahead in the input stream by `n` positions.
+ *
+ * This function is used to peek at the character at a given position in the
+ * input stream without advancing the tokenizer's current position. It is
+ * used to determine whether a given token is valid or not.
+ *
+ * @param t   Pointer to the Tokenizer instance.
+ * @param n   The number of positions to look ahead.
+ *
+ * @return A pointer to the character at the desired position in the input
+ *         stream if it exists, or `NULL` if the desired position is beyond
+ *         the end of the stream.
+ */
 static inline const DecodedStream *peekPtrAtN(Tokenizer *t, size_t n) {
+  // Check if the desired position is beyond the end of the stream
   if (t->curr + n >= t->end)
     return NULL;
 
+  // Return the pointer at the desired position
   return t->curr + n;
 }
 
+/**
+ * @brief Advances the tokenizer's current position by `n` positions.
+ *
+ * This function is used to advance the tokenizer's current position in the
+ * input stream by a given number of positions. It is used to skip over
+ * characters in the input stream that are not relevant to the current
+ * token being processed.
+ *
+ * As the tokenizer advances, it keeps track of the line and column numbers
+ * of the current position in the input stream. If a newline character is
+ * encountered during the advancement, the line number is incremented and
+ * the column number is reset to 1. Otherwise, the column number is simply
+ * incremented by 1.
+ *
+ * If the desired position is beyond the end of the stream, this function
+ * returns `NULL`.
+ *
+ * @param t   Pointer to the Tokenizer instance.
+ * @param n   The number of positions to advance in the input stream.
+ *
+ * @return A pointer to the character at the desired position in the input
+ *         stream if it exists, or `NULL` if the desired position is beyond
+ *         the end of the stream.
+ */
 static inline const DecodedStream *advancePtrToN(Tokenizer *t, size_t n) {
   for(size_t i = 0; i < n && t->curr < t->end; i++) {
     if(t->curr->bytePtr && *t->curr->bytePtr == '\n') {
@@ -62,6 +113,18 @@ static inline const DecodedStream *advancePtrToN(Tokenizer *t, size_t n) {
   return t->curr < t->end ? t->curr : NULL;
 }
 
+/**
+ * @brief Moves the tokenizer's position back by one.
+ *
+ * This function returns a pointer to the character immediately before the
+ * current position in the tokenizer's input stream. If the current position
+ * is at the start of the input stream, it returns `NULL` to indicate that
+ * no further lookback is possible.
+ *
+ * @param t Pointer to the Tokenizer instance.
+ * @return A pointer to the character before the current position, or `NULL`
+ *         if the current position is at the start of the input stream.
+ */
 static inline const DecodedStream *ptrLookback(Tokenizer *t) {
   if(t->curr <= t->start)
     return NULL;

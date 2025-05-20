@@ -2,6 +2,18 @@
 #include "comot-css/tokens.h"
 #include "comot-css/error.h"
 
+/**
+ * Consumes a comment or delimiter starting with the given code point.
+ *
+ * This function will consume a comment if one is present, and otherwise
+ * will consume a single delimiter token.  If the end of the file is
+ * reached before the start or end of the comment is found, an error is
+ * logged and the function will return an error token.
+ *
+ * @param t The tokenizer
+ * @param codePoint The code point to consume as a delimiter if not a comment
+ * @return A token representing the comment or delimiter
+ */
 Token consumeCommentOrDelim(Tokenizer *t, char codePoint) {
   const DecodedStream *tCurr = t->curr;
 

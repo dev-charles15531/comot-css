@@ -4,6 +4,27 @@
 #define MAX_DECODED_OUTPUT_CAP (1 << 19)   // 512k decoded code points
 #define MAX_CHARSET_LEN 32                 // Max declared charset length
 
+/**
+ * Tries to extract the declared character set from the given CSS data.
+ *
+ * If a declared character set is found, it is copied into the given buffer
+ * and the function returns. If no declared character set is found, the buffer
+ * is left unchanged.
+ *
+ * The function will not extract character sets that are encoded in any way
+ * (e.g., base64, quoted-printable, etc.). It will also not extract character
+ * sets that are encoded in a different character set than the one the CSS data
+ * is encoded in.
+ *
+ * Note that the function does not validate the extracted character set name.
+ * It is up to the caller to ensure that the extracted name is valid if it is
+ * used to decode the CSS data.
+ *
+ * @param data The CSS data to extract the declared character set from.
+ * @param len The length of the given data.
+ * @param charset The buffer to copy the declared character set into. The buffer
+ *                must be at least as large as MAX_CHARSET_LEN.
+ */
 void tryExtractCharset(const uint8_t *data, size_t len, char *charset) {
   const char *prefix = "@charset \"";
   const size_t prefixLen = strlen(prefix);
@@ -39,6 +60,23 @@ void tryExtractCharset(const uint8_t *data, size_t len, char *charset) {
   }
 }
 
+/**
+ * Detects the encoding of the given CSS data.
+ *
+ * If the data contains a UTF-8, UTF-16LE, or UTF-16BE byte order mark, that
+ * encoding is returned. Otherwise, the function attempts to extract a declared
+ * character set from the data and validate it. If a declared character set is
+ * found and is valid, the corresponding encoding is returned. If no declared
+ * character set is found, or if the declared character set is invalid, the
+ * function returns ENCODING_UTF8 as a default fallback.
+ *
+ * @param data The CSS data to detect the encoding of.
+ * @param len The length of the given data.
+ * @param declaredCharset A buffer to copy a declared character set into, if
+ *                        found. The buffer must be at least MAX_CHARSET_LEN
+ *                        bytes long.
+ * @return The detected encoding of the given data.
+ */
 Encoding detectEncoding(const uint8_t *data, size_t len, char *declaredCharset) {
   // Strict input validation
   if(!data || len == 0 || !declaredCharset)
@@ -83,6 +121,18 @@ Encoding detectEncoding(const uint8_t *data, size_t len, char *declaredCharset) 
   return ENCODING_UTF8; // Default fallback
 }
 
+/**
+ * Normalizes the given sequence of code points according to the following rules:
+ *
+ *   • 0x0000 is replaced with the replacement character
+ *   • 0x000D (CR) is replaced with 0x000A (LF)
+ *   • 0x000C (FF) is replaced with 0x000A (LF)
+ *   • CRLF (0x000D 0x000A) is replaced with a single 0x000A (LF)
+ *
+ * @param input The sequence of code points to normalize.
+ * @param len The length of the given sequence.
+ * @return The length of the normalized sequence.
+ */
 size_t normalizeCodePoints(DecodedStream *input, size_t len) {
   size_t write = 0;
   for(size_t read = 0; read < len; ++ read) {
@@ -105,10 +155,36 @@ size_t normalizeCodePoints(DecodedStream *input, size_t len) {
   return write;
 }
 
+/**
+ * @brief Checks if a byte is a valid UTF-8 continuation byte.
+ *
+ * This function determines whether the given byte is a valid continuation
+ * byte in a UTF-8 encoding sequence. A valid UTF-8 continuation byte has
+ * the binary form 10xxxxxx.
+ *
+ * @param b The byte to check.
+ * @return Non-zero if the byte is a valid UTF-8 continuation byte, zero otherwise.
+ */
 int isValidUtf8Cont(uint8_t b) {
   return (b & 0xC0) == 0x80;
 }
 
+/**
+ * Decodes a UTF-8 encoded byte sequence into an array of code points.
+ *
+ * This function processes the input byte sequence and decodes each valid
+ * UTF-8 character into its corresponding Unicode code point. The decoded
+ * code points are stored in the output array, along with a pointer to
+ * their original byte position. If the input contains invalid UTF-8
+ * sequences, they are replaced with a replacement character.
+ *
+ * @param in The input byte sequence to decode.
+ * @param len The length of the input byte sequence.
+ * @param out The output array where decoded code points will be stored.
+ * @param cap The maximum capacity of the output array.
+ * @return The number of code points successfully decoded and stored in the
+ *         output array.
+ */
 size_t decodeUtf8(const uint8_t *in, size_t len, DecodedStream *out, size_t cap) {
   if (!in || !out || cap == 0 || len == 0)
     return 0;
@@ -153,6 +229,24 @@ size_t decodeUtf8(const uint8_t *in, size_t len, DecodedStream *out, size_t cap)
   return o;
 }
 
+/**
+ * Decodes a UTF-16 encoded byte sequence into an array of code points.
+ *
+ * This function processes the input byte sequence and decodes each valid
+ * UTF-16 character into its corresponding Unicode code point. The decoded
+ * code points are stored in the output array, along with a pointer to
+ * their original byte position. If the input contains invalid UTF-16
+ * sequences, they are replaced with a replacement character.
+ *
+ * @param in The input byte sequence to decode.
+ * @param len The length of the input byte sequence.
+ * @param out The output array where decoded code points will be stored.
+ * @param cap The maximum capacity of the output array.
+ * @param le If true, the input byte sequence is in little-endian order.
+ *           Otherwise, it is in big-endian order.
+ * @return The number of code points successfully decoded and stored in the
+ *         output array.
+ */
 size_t decodeUtf16(const uint8_t *in, size_t len, DecodedStream *out, size_t cap, int le) {
   if(!in || !out || cap == 0 || len == 0)
     return 0;
@@ -187,6 +281,28 @@ size_t decodeUtf16(const uint8_t *in, size_t len, DecodedStream *out, size_t cap
   return o;
 }
 
+/**
+ * Decodes a CSS input byte sequence into an array of code points.
+ *
+ * This function detects the encoding of the given input byte sequence
+ * (either UTF-8, UTF-16LE, or UTF-16BE) and decodes it into an array of
+ * Unicode code points. The decoded code points are stored in the output
+ * array, along with a pointer to their original byte position. If the
+ * input contains invalid UTF-8 sequences, they are replaced with a
+ * replacement character.
+ *
+ * The function performs several checks on the input to prevent it from
+ * being used for malicious purposes. These checks include bounds checking,
+ * rejecting suspicious patterns, and detecting encoding via BOM or
+ * @charset.
+ *
+ * @param raw The input byte sequence to decode.
+ * @param len The length of the input byte sequence.
+ * @param out The output array where decoded code points will be stored.
+ * @param cap The maximum capacity of the output array.
+ * @return The number of code points successfully decoded and stored in the
+ *         output array.
+ */
 size_t decodeCssInput(const uint8_t *raw, size_t len, DecodedStream *out, size_t cap) {
   if(!raw || !out || cap == 0 || len == 0)
     return 0;

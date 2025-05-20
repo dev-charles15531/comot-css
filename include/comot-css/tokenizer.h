@@ -10,9 +10,8 @@ typedef struct Tokenizer Tokenizer;   // forward dcl
 
 // Create/destroy tokenizer
 Tokenizer *tokCreate(const uint8_t *input, size_t len, Arena *arena);
-/*void tokDestroy(Tokenizer *t);*/
 
-// Core functions
+// Get next token
 Token tokNext(Tokenizer *t);
 
 #endif

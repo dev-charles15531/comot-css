@@ -5,6 +5,16 @@
 #include <string.h>
 #include <stdlib.h>
 
+/**
+ * @brief Consume an identifier-like token from the input stream
+ *
+ * This function handles the weird edge cases of the CSS grammar where
+ * identifiers can be followed by ( to form a function token. This
+ * function is slightly more expensive than the other token-consuming
+ * functions because of this.
+ *
+ * @return The next token in the input stream
+ */
 Token consumeIdentLikeToken(Tokenizer *t) {
   const DecodedStream *tCurr = t->curr;
   size_t startLine = t->line;

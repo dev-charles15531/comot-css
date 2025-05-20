@@ -10,6 +10,19 @@
 
 #define ARENA_ALIGNMENT alignof(max_align_t)
 
+/**
+ * @brief Create a tokenizer from a raw CSS input.
+ *
+ * This function initializes a tokenizer by decoding the CSS input and
+ * allocating a Tokenizer structure. It will return NULL if the input is
+ * invalid or if the arena allocation fails.
+ *
+ * @param raw The raw CSS input to decode.
+ * @param len The length of the input.
+ * @param arena The arena to allocate memory from.
+ *
+ * @return A pointer to a new Tokenizer, or NULL on failure.
+ */
 Tokenizer *tokCreate(const uint8_t *raw, size_t len, Arena *arena) {
   if(!arena || !raw) 
     return NULL;
@@ -43,6 +56,21 @@ Tokenizer *tokCreate(const uint8_t *raw, size_t len, Arena *arena) {
   return t;
 }
 
+/**
+ * Retrieves the next token from the tokenizer's input stream.
+ *
+ * This function processes the current state of the tokenizer's finite
+ * state machine (FSM) to determine the type of token present at the
+ * current position in the input stream. It handles various token types
+ * including identifiers, strings, numbers, delimiters, and whitespace.
+ * The tokenizer's state is updated accordingly, and the appropriate
+ * token is returned.
+ *
+ * @param t Pointer to the Tokenizer instance.
+ * @return The next Token in the input stream, or an error Token if
+ *         the tokenizer is in an invalid state or encounters an
+ *         unexpected input.
+ */
 Token tokNext(Tokenizer *t) {
   if(!t) {
     printf("Invalid or NULL Tokenizer type t");
