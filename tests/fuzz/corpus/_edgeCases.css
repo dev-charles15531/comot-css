@@ -1,0 +1,61 @@
+/* Complex, edge-case CSS fuzzing example */
+@charset "UTF-8";
+
+/* Escaped characters, invalid identifiers */
+div[class^="\66\6f\6f"] > .bar:not(:first-child)::before {
+  content: "";
+  display: block;
+}
+
+/* Unicode identifiers and non-standard spacing */
+\u0064\u0069\u0076[ \t class |= "baz" ]:hover + span::after {
+  content: "\2713";
+  font-family: "Times New Roman", serif;
+  font-weight: bold;
+}
+
+/* Deep combinator chains */
+html body div > ul li:nth-child(odd) > a[href^="#"] ~ section#main > .widget:last-of-type::first-letter {
+  color: red;
+  background: linear-gradient(to right, #fff 0%, #000 100%);
+}
+
+/* Nested attribute selectors */
+input[type="text"][data-id^="123"][data-user$="xyz"]:not([disabled]):focus {
+  border: 1px solid green;
+}
+
+/* Complex media and supports */
+@media (min-width: 300px) and (orientation: landscape) {
+  @supports (display: grid) and (not (display: flex)) {
+    .grid-layout {
+      display: grid;
+      grid-template-columns: 1fr 2fr minmax(100px, 1fr);
+    }
+  }
+}
+
+/* Invalid or tricky combinations (still valid syntax) */
+p::before, p::after, q:lang(en) > span[class*="highlighted_"] {
+  content: attr(data-label) " → ";
+  color: rebeccapurple;
+}
+
+/* Edge-case function values */
+div {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'/>");
+  animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+}
+
+/* Keyframes with invalid timings */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  1.0001% { transform: rotate(45deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Comment edge cases */
+body /* comment start */ .container /* nested */ > header {
+  padding: 0; /* nested comment? */ margin: auto;
+}
+
