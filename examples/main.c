@@ -39,7 +39,7 @@ const char* tokenTypeToString(TokenType type) {
 }
 
 int main(void) {
-  Arena arena = arena_create(1024 * 1024);  // 1mb
+  Arena arena = arena_create(1024 * 8);  // 8KB
 
   const char *css =
   "/* comment token */\n"
@@ -58,11 +58,11 @@ int main(void) {
   "  }\n"
   "}\n";
 
-
-
   Tokenizer *t = tokCreate((const uint8_t *) css, strlen(css), &arena);
   if (!t) {
     fprintf(stderr, "Failed to create tokenizer.\n");
+    arena_destroy(&arena);
+
     return 1;
   }
 
